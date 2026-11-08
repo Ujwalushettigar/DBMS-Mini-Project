@@ -139,8 +139,8 @@ To deploy the schema to your live Supabase cloud database:
 
 1. Log in to [Supabase Dashboard](https://supabase.com/dashboard) and create a new project.
 2. Navigate to the **SQL Editor** tab from the left sidebar.
-3. Open [`database/schema/schema.sql`](./database/schema/schema.sql) from this repository.
-4. Copy the entire contents of `schema.sql` and paste them into the Supabase SQL Editor.
+3. Open [`database/schema/create_tables.sql`](./database/schema/create_tables.sql) from this repository.
+4. Copy the entire contents of `create_tables.sql` and paste them into the Supabase SQL Editor.
 5. Click **Run** to execute the script.
 6. The script will automatically:
    - Enable the `pgcrypto` extension for UUID generation.
@@ -198,10 +198,13 @@ government-recruitment-management-system/
 │
 ├── database/
 │   ├── schema/
-│   │   └── schema.sql        # Complete 9-table PostgreSQL schema, triggers & RLS
+│   │   └── create_tables.sql # Complete 9-table PostgreSQL schema, triggers & RLS
+│   ├── sample_data/
+│   │   ├── insert_data.sql   # Empty (0 bytes) reserved for sample records
+│   │   └── README.md         # Insertion order & data instructions
 │   ├── queries/
-│   │   └── queries.sql       # Academic query repository (reserved)
-│   └── sample_data/
+│   │   └── queries.sql       # 12 DBMS Lab experiments (SELECT, JOIN, Subqueries, etc.)
+│   └── README.md             # Comprehensive database manual & documentation
 │
 ├── docs/
 │   ├── database-design.md    # Data dictionary, 3NF normalization, referential integrity
