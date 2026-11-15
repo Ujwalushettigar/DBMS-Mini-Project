@@ -295,7 +295,7 @@ This script calls the Supabase Admin API (`service_role` key) to create the four
    - 3 Published Results
 
 ### Step 4: Execute Laboratory Queries from `queries.sql`
-Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) in the Supabase SQL Editor to test all 15 laboratory sections (58 SQL queries).
+Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) in your SQL client (psql, pgAdmin, DBeaver) or Supabase SQL Editor to test **5 lab experiments with 23 queries (plus Experiment 6 with 6 additional queries)** following the CS522L5C DBMS lab manual pedagogy. All queries run safely inside a dedicated `grems_lab` schema.
 
 ---
 
@@ -367,7 +367,7 @@ government-recruitment-management-system/
 │   ├── sample_data/
 │   │   └── insert_data.sql   # Realistic, idempotent dummy dataset with prerequisite validation
 │   ├── queries/
-│   │   └── queries.sql       # 15 DBMS Lab practical query sections (58 SQL queries)
+│   │   └── queries.sql       # 5 lab experiments with 23 queries (plus Exp 6 with 6 additional queries)
 │   └── README.md             # Comprehensive database manual, execution order & schema guide
 │
 ├── docs/

@@ -1,825 +1,1253 @@
--- ============================================================================
--- GOVERNMENT RECRUITMENT EXAMINATION MANAGEMENT SYSTEM (GREMS)
--- Database: PostgreSQL 15+ (Supabase Compatible)
--- Course: CS522L5C – Database Management System Laboratory
--- File: database/queries/queries.sql
--- Description: Practical SQL query laboratory manual organized into 15 clearly
---              numbered sections covering core relational DBMS concepts.
--- IMPORTANT NOTES:
--- 1. All queries reference the nine core recruitment database tables.
--- 2. Contains NO main CREATE TABLE statements and NO INSERT statements.
--- 3. All sample data must be populated manually before SELECT queries return records.
--- 4. Destructive DML operations are safely contained within BEGIN ... ROLLBACK blocks.
--- ============================================================================
+-- ==============================================================================
+-- GREMS  -  Government Recruitment Examination Management System
+-- DBMS LABORATORY : SQL QUERIES  (database/queries/queries.sql)
+-- ==============================================================================
+-- Format follows the lab manual:  Problem statement -> SOLUTIONS
+-- (CREATE TABLE, INSERT, SELECT * with output) -> every query with its output.
+--
+-- DATABASE      : PostgreSQL 15+ (tested on PostgreSQL 16)
+-- HOW TO RUN    : psql / pgAdmin / DBeaver  ->  run the complete file once.
+--                 Supabase SQL Editor shows only the LAST result of a script,
+--                 so run query by query and select  SET search_path TO grems_lab;
+--                 together with the query you run.
+-- SAFE TO RUN   : Everything is created inside a separate schema called
+--                 grems_lab. The real GREMS tables are never touched. The file
+--                 can be re-run any number of times (it drops grems_lab first).
+-- NOTE          : The lab tables use the same table and column names as the
+--                 real database (database/schema/create_tables.sql) but use
+--                 short readable ids ('C1', 'E1', 'X1' ...) instead of UUIDs
+--                 and leave out the Supabase auth table, exactly like the
+--                 manual uses 'B1', 'C1' in the Bank database.
+-- INTENTIONAL ERROR : Experiment 5, trigger test 1 raises an ERROR on purpose to
+--                 prove that the trigger rejects an over-capacity allocation.
+-- OUTPUT        : The result shown under each query was produced by running
+--                 this file on PostgreSQL. Column names print in lowercase
+--                 because PostgreSQL folds unquoted names.
+
+DROP SCHEMA IF EXISTS grems_lab CASCADE;
+
+CREATE SCHEMA grems_lab;
+
+SET search_path TO grems_lab;
 
 -- ============================================================================
--- 1. BASIC SELECT QUERIES AND FILTERING
--- Concepts: Column projection, conditional predicates (WHERE), pattern matching (LIKE),
---           sorting (ORDER BY), and null value checks.
+-- EXPERIMENT 1 :  CANDIDATES, EXAMINATIONS, CENTERS AND APPLICATIONS
 -- ============================================================================
 
--- 1.1 Retrieve all candidate dossiers sorted alphabetically by name
-SELECT 
-    candidate_id,
-    candidate_number,
-    full_name,
-    date_of_birth,
-    gender,
-    phone_number,
-    city,
-    state,
-    category
-FROM public.candidates
-ORDER BY full_name ASC;
+-- 1. Consider the following schema for the GREMS Database:
+--
+--    CANDIDATES(Candidate_id, Candidate_number, Full_name, Date_of_birth, Gender,
+--               Phone_number, City, State, Category)
+--    EDUCATIONAL_QUALIFICATIONS(Qualification_id, Candidate_id, Qualification_level,
+--               Institution_name, Passing_year, Percentage)
+--    EXAMINATIONS(Examination_id, Examination_code, Examination_name,
+--               Conducting_authority, Application_start_date, Application_end_date,
+--               Examination_date, Application_fee, Total_vacancies, Examination_status)
+--    EXAM_CENTERS(Center_id, Center_code, Center_name, City, State, Total_capacity)
+--    EXAMINATION_CENTERS(Examination_id, Center_id, Allocated_capacity)
+--    APPLICATIONS(Application_id, Application_number, Candidate_id, Examination_id,
+--               Center_id, Applied_at, Application_status, Payment_status)
+--    ADMIT_CARDS(Admit_card_id, Application_id, Roll_number, Issue_date, Reporting_time)
+--    RESULTS(Result_id, Application_id, Marks_obtained, Maximum_marks, Percentage,
+--               Rank, Result_status, Published_at)
+--
+--    Note: Application_status may be of following: SUBMITTED, ACCEPTED, REJECTED
+--          Payment_status     may be of following: PAID, PENDING, FAILED
+--
+--    Write SQL queries to
+--    1. Find all the candidates who have applied for at least one examination at the
+--       "Mangaluru" exam center.
+--    2. Find the name of the candidate who has scored the highest marks among all the
+--       candidates.
+--    3. Retrieve the candidate name and examination fee of the candidates who have paid
+--       the application fee more than Rs. 200.
+--    4. Retrieve the details of the exam center with maximum and minimum capacity among
+--       the various exam centers.
+--    5. Demonstrate how you delete all application tuples at every exam center located in
+--       a specific city.
 
--- 1.2 Display all published recruitment examinations
-SELECT 
-    examination_id,
-    examination_code,
-    examination_name,
-    conducting_authority,
-    examination_date,
-    application_fee,
-    total_vacancies,
-    examination_status
-FROM public.examinations
-WHERE examination_status = 'published'
-ORDER BY examination_date ASC;
-
--- 1.3 Filter candidates by reservation category and state
-SELECT 
-    candidate_number,
-    full_name,
-    gender,
-    phone_number,
-    city,
-    state,
-    category
-FROM public.candidates
-WHERE category = 'OBC' 
-  AND state = 'Karnataka';
-
--- 1.4 Search examinations with title matching a pattern using ILIKE (case-insensitive)
-SELECT 
-    examination_code,
-    examination_name,
-    conducting_authority,
-    total_vacancies,
-    examination_date
-FROM public.examinations
-WHERE examination_name ILIKE '%Graduate%'
-ORDER BY examination_date ASC;
-
--- 1.5 Retrieve applications with a pending scrutiny or verification status
-SELECT 
-    application_number,
-    candidate_id,
-    examination_id,
-    applied_at,
-    application_status,
-    payment_status
-FROM public.applications
-WHERE application_status IN ('submitted', 'under_review')
-ORDER BY applied_at ASC;
+-- ----------------------------------------------------------------------------
+-- SOLUTIONS:
+-- ----------------------------------------------------------------------------
+SET search_path TO grems_lab;
 
 
--- ============================================================================
--- 2. UPDATE AND DELETE OPERATIONS
--- Concepts: Safe transactional data manipulation, predicate-bound updates,
---           audit timestamp maintenance, and foreign-key safe deletions.
--- ============================================================================
+CREATE TABLE CANDIDATES(
+    CANDIDATE_ID      VARCHAR(10),
+    CANDIDATE_NUMBER  VARCHAR(20) NOT NULL,
+    FULL_NAME         VARCHAR(30) NOT NULL,
+    DATE_OF_BIRTH     DATE        NOT NULL,
+    GENDER            VARCHAR(10),
+    PHONE_NUMBER      VARCHAR(12) NOT NULL,
+    CITY              VARCHAR(20) NOT NULL,
+    STATE             VARCHAR(20) NOT NULL,
+    CATEGORY          VARCHAR(10),
+    PRIMARY KEY(CANDIDATE_ID),
+    UNIQUE(CANDIDATE_NUMBER));
 
--- 2.1 Demonstrate UPDATE of candidate contact details (Transactional Demonstration)
+INSERT INTO CANDIDATES VALUES
+    ('C1','CND-2026-00101','RAHUL SHARMA','2000-05-14','MALE','9845012345','MANGALURU','KARNATAKA','GENERAL'),
+    ('C2','CND-2026-00102','PRIYA PATEL','1999-11-02','FEMALE','9825098765','AHMEDABAD','GUJARAT','OBC'),
+    ('C3','CND-2026-00103','AMIT KUMAR','2001-03-21','MALE','9431011223','PATNA','BIHAR','SC'),
+    ('C4','CND-2026-00104','ANITA DSOUZA','2000-08-30','FEMALE','9886055667','UDUPI','KARNATAKA','GENERAL'),
+    ('C5','CND-2026-00105','SUMANTH RAO','1998-01-09','MALE','9900144556','BENGALURU','KARNATAKA','OBC'),
+    ('C6','CND-2026-00106','FATIMA KHAN','2002-07-17','FEMALE','9703277889','HYDERABAD','TELANGANA','GENERAL');
+
+SELECT * FROM CANDIDATES;
+
+-- OUTPUT:
+--  candidate_id | candidate_number | full_name    | date_of_birth | gender | phone_number | city      | state     | category
+-- --------------+------------------+--------------+---------------+--------+--------------+-----------+-----------+----------
+--  C1           | CND-2026-00101   | RAHUL SHARMA | 2000-05-14    | MALE   | 9845012345   | MANGALURU | KARNATAKA | GENERAL
+--  C2           | CND-2026-00102   | PRIYA PATEL  | 1999-11-02    | FEMALE | 9825098765   | AHMEDABAD | GUJARAT   | OBC
+--  C3           | CND-2026-00103   | AMIT KUMAR   | 2001-03-21    | MALE   | 9431011223   | PATNA     | BIHAR     | SC
+--  C4           | CND-2026-00104   | ANITA DSOUZA | 2000-08-30    | FEMALE | 9886055667   | UDUPI     | KARNATAKA | GENERAL
+--  C5           | CND-2026-00105   | SUMANTH RAO  | 1998-01-09    | MALE   | 9900144556   | BENGALURU | KARNATAKA | OBC
+--  C6           | CND-2026-00106   | FATIMA KHAN  | 2002-07-17    | FEMALE | 9703277889   | HYDERABAD | TELANGANA | GENERAL
+-- (6 rows)
+
+CREATE TABLE EDUCATIONAL_QUALIFICATIONS(
+    QUALIFICATION_ID     VARCHAR(10),
+    CANDIDATE_ID         VARCHAR(10) NOT NULL,
+    QUALIFICATION_LEVEL  VARCHAR(15) NOT NULL,
+    INSTITUTION_NAME     VARCHAR(40) NOT NULL,
+    PASSING_YEAR         INT,
+    PERCENTAGE           NUMERIC(5,2),
+    PRIMARY KEY(QUALIFICATION_ID),
+    FOREIGN KEY(CANDIDATE_ID) REFERENCES CANDIDATES(CANDIDATE_ID) ON DELETE CASCADE);
+
+INSERT INTO EDUCATIONAL_QUALIFICATIONS VALUES
+    ('Q1','C1','12TH','ST ALOYSIUS PU COLLEGE',2018,91.20),
+    ('Q2','C1','BACHELORS','SAHYADRI COLLEGE OF ENGG',2022,78.50),
+    ('Q3','C2','BACHELORS','GUJARAT UNIVERSITY',2021,72.40),
+    ('Q4','C3','MASTERS','PATNA UNIVERSITY',2024,68.90),
+    ('Q5','C4','BACHELORS','MANIPAL UNIVERSITY',2022,81.00),
+    ('Q6','C5','BACHELORS','BANGALORE UNIVERSITY',2020,66.75),
+    ('Q7','C6','BACHELORS','OSMANIA UNIVERSITY',2024,74.10);
+
+SELECT * FROM EDUCATIONAL_QUALIFICATIONS;
+
+-- OUTPUT:
+--  qualification_id | candidate_id | qualification_level | institution_name         | passing_year | percentage
+-- ------------------+--------------+---------------------+--------------------------+--------------+------------
+--  Q1               | C1           | 12TH                | ST ALOYSIUS PU COLLEGE   | 2018         | 91.20
+--  Q2               | C1           | BACHELORS           | SAHYADRI COLLEGE OF ENGG | 2022         | 78.50
+--  Q3               | C2           | BACHELORS           | GUJARAT UNIVERSITY       | 2021         | 72.40
+--  Q4               | C3           | MASTERS             | PATNA UNIVERSITY         | 2024         | 68.90
+--  Q5               | C4           | BACHELORS           | MANIPAL UNIVERSITY       | 2022         | 81.00
+--  Q6               | C5           | BACHELORS           | BANGALORE UNIVERSITY     | 2020         | 66.75
+--  Q7               | C6           | BACHELORS           | OSMANIA UNIVERSITY       | 2024         | 74.10
+-- (7 rows)
+
+CREATE TABLE EXAMINATIONS(
+    EXAMINATION_ID          VARCHAR(10),
+    EXAMINATION_CODE        VARCHAR(20) NOT NULL,
+    EXAMINATION_NAME        VARCHAR(40) NOT NULL,
+    CONDUCTING_AUTHORITY    VARCHAR(20) NOT NULL,
+    APPLICATION_START_DATE  DATE        NOT NULL,
+    APPLICATION_END_DATE    DATE        NOT NULL,
+    EXAMINATION_DATE        DATE        NOT NULL,
+    APPLICATION_FEE         NUMERIC(8,2) DEFAULT 0,
+    TOTAL_VACANCIES         INT         NOT NULL,
+    EXAMINATION_STATUS      VARCHAR(15) NOT NULL,
+    PRIMARY KEY(EXAMINATION_ID),
+    UNIQUE(EXAMINATION_CODE));
+
+INSERT INTO EXAMINATIONS VALUES
+    ('E1','UPSC-CSP-2026','CIVIL SERVICES PRELIMS','UPSC','2026-02-01','2026-03-05','2026-05-24',100,979,'COMPLETED'),
+    ('E2','KPSC-FDA-2026','FIRST DIVISION ASSISTANT','KPSC','2026-06-01','2026-07-15','2026-09-20',300,250,'COMPLETED'),
+    ('E3','SSC-CGL-2026','COMBINED GRADUATE LEVEL','SSC','2026-10-01','2026-11-30','2027-01-18',100,1500,'OPEN'),
+    ('E4','IBPS-PO-2027','PROBATIONARY OFFICER','IBPS','2027-01-10','2027-02-10','2027-04-12',850,4455,'UPCOMING');
+
+SELECT * FROM EXAMINATIONS;
+
+-- OUTPUT:
+--  examination_id | examination_code | examination_name         | conducting_authority | application_start_date | application_end_date | examination_date | application_fee | total_vacancies | examination_status
+-- ----------------+------------------+--------------------------+----------------------+------------------------+----------------------+------------------+-----------------+-----------------+--------------------
+--  E1             | UPSC-CSP-2026    | CIVIL SERVICES PRELIMS   | UPSC                 | 2026-02-01             | 2026-03-05           | 2026-05-24       | 100.00          | 979             | COMPLETED
+--  E2             | KPSC-FDA-2026    | FIRST DIVISION ASSISTANT | KPSC                 | 2026-06-01             | 2026-07-15           | 2026-09-20       | 300.00          | 250             | COMPLETED
+--  E3             | SSC-CGL-2026     | COMBINED GRADUATE LEVEL  | SSC                  | 2026-10-01             | 2026-11-30           | 2027-01-18       | 100.00          | 1500            | OPEN
+--  E4             | IBPS-PO-2027     | PROBATIONARY OFFICER     | IBPS                 | 2027-01-10             | 2027-02-10           | 2027-04-12       | 850.00          | 4455            | UPCOMING
+-- (4 rows)
+
+CREATE TABLE EXAM_CENTERS(
+    CENTER_ID       VARCHAR(10),
+    CENTER_CODE     VARCHAR(10) NOT NULL,
+    CENTER_NAME     VARCHAR(30) NOT NULL,
+    CITY            VARCHAR(20) NOT NULL,
+    STATE           VARCHAR(20) NOT NULL,
+    TOTAL_CAPACITY  INT         NOT NULL,
+    PRIMARY KEY(CENTER_ID),
+    UNIQUE(CENTER_CODE));
+
+INSERT INTO EXAM_CENTERS VALUES
+    ('X1','MNG-01','SAHYADRI EXAM HALL','MANGALURU','KARNATAKA',500),
+    ('X2','BLR-01','CHRIST EXAM HALL','BENGALURU','KARNATAKA',800),
+    ('X3','DEL-01','DU EXAM HALL','DELHI','DELHI',1000),
+    ('X4','HYD-01','OSMANIA EXAM HALL','HYDERABAD','TELANGANA',600),
+    ('X5','UDP-01','MANIPAL EXAM HALL','UDUPI','KARNATAKA',300);
+
+SELECT * FROM EXAM_CENTERS;
+
+-- OUTPUT:
+--  center_id | center_code | center_name        | city      | state     | total_capacity
+-- -----------+-------------+--------------------+-----------+-----------+----------------
+--  X1        | MNG-01      | SAHYADRI EXAM HALL | MANGALURU | KARNATAKA | 500
+--  X2        | BLR-01      | CHRIST EXAM HALL   | BENGALURU | KARNATAKA | 800
+--  X3        | DEL-01      | DU EXAM HALL       | DELHI     | DELHI     | 1000
+--  X4        | HYD-01      | OSMANIA EXAM HALL  | HYDERABAD | TELANGANA | 600
+--  X5        | UDP-01      | MANIPAL EXAM HALL  | UDUPI     | KARNATAKA | 300
+-- (5 rows)
+
+CREATE TABLE EXAMINATION_CENTERS(
+    EXAMINATION_ID      VARCHAR(10),
+    CENTER_ID           VARCHAR(10),
+    ALLOCATED_CAPACITY  INT NOT NULL,
+    PRIMARY KEY(EXAMINATION_ID, CENTER_ID),
+    FOREIGN KEY(EXAMINATION_ID) REFERENCES EXAMINATIONS(EXAMINATION_ID) ON DELETE CASCADE,
+    FOREIGN KEY(CENTER_ID) REFERENCES EXAM_CENTERS(CENTER_ID) ON DELETE CASCADE);
+
+INSERT INTO EXAMINATION_CENTERS VALUES
+    ('E1','X1',300),
+    ('E1','X2',400),
+    ('E1','X3',500),
+    ('E2','X1',250),
+    ('E2','X2',300),
+    ('E3','X1',200),
+    ('E3','X2',300),
+    ('E3','X4',250),
+    ('E4','X3',400),
+    ('E4','X5',150);
+
+SELECT * FROM EXAMINATION_CENTERS;
+
+-- OUTPUT:
+--  examination_id | center_id | allocated_capacity
+-- ----------------+-----------+--------------------
+--  E1             | X1        | 300
+--  E1             | X2        | 400
+--  E1             | X3        | 500
+--  E2             | X1        | 250
+--  E2             | X2        | 300
+--  E3             | X1        | 200
+--  E3             | X2        | 300
+--  E3             | X4        | 250
+--  E4             | X3        | 400
+--  E4             | X5        | 150
+-- (10 rows)
+
+CREATE TABLE APPLICATIONS(
+    APPLICATION_ID      VARCHAR(10),
+    APPLICATION_NUMBER  VARCHAR(20) NOT NULL,
+    CANDIDATE_ID        VARCHAR(10) NOT NULL,
+    EXAMINATION_ID      VARCHAR(10) NOT NULL,
+    CENTER_ID           VARCHAR(10),
+    APPLIED_AT          DATE        NOT NULL,
+    APPLICATION_STATUS  VARCHAR(15) NOT NULL,
+    PAYMENT_STATUS      VARCHAR(10) DEFAULT 'PENDING',
+    PRIMARY KEY(APPLICATION_ID),
+    UNIQUE(APPLICATION_NUMBER),
+    UNIQUE(CANDIDATE_ID, EXAMINATION_ID),
+    FOREIGN KEY(CANDIDATE_ID) REFERENCES CANDIDATES(CANDIDATE_ID) ON DELETE CASCADE,
+    FOREIGN KEY(EXAMINATION_ID, CENTER_ID)
+        REFERENCES EXAMINATION_CENTERS(EXAMINATION_ID, CENTER_ID) ON DELETE CASCADE);
+
+INSERT INTO APPLICATIONS VALUES
+    ('A1','APP-2026-0001','C1','E1','X1','2026-02-10','ACCEPTED','PAID'),
+    ('A2','APP-2026-0002','C2','E1','X3','2026-02-12','ACCEPTED','PAID'),
+    ('A3','APP-2026-0003','C3','E1','X2','2026-02-20','REJECTED','PENDING'),
+    ('A4','APP-2026-0004','C1','E2','X1','2026-06-10','ACCEPTED','PAID'),
+    ('A5','APP-2026-0005','C4','E2','X1','2026-06-11','ACCEPTED','PAID'),
+    ('A6','APP-2026-0006','C5','E2','X2','2026-06-15','ACCEPTED','PAID'),
+    ('A7','APP-2026-0007','C2','E2','X2','2026-06-20','ACCEPTED','PAID'),
+    ('A8','APP-2026-0008','C1','E3','X1','2026-10-05','SUBMITTED','PAID'),
+    ('A9','APP-2026-0009','C4','E3','X1','2026-10-07','SUBMITTED','PENDING'),
+    ('A10','APP-2026-0010','C6','E3','X4','2026-10-09','ACCEPTED','PAID'),
+    ('A11','APP-2026-0011','C3','E3','X2','2026-10-12','REJECTED','FAILED');
+
+SELECT * FROM APPLICATIONS;
+
+-- OUTPUT:
+--  application_id | application_number | candidate_id | examination_id | center_id | applied_at | application_status | payment_status
+-- ----------------+--------------------+--------------+----------------+-----------+------------+--------------------+----------------
+--  A1             | APP-2026-0001      | C1           | E1             | X1        | 2026-02-10 | ACCEPTED           | PAID
+--  A2             | APP-2026-0002      | C2           | E1             | X3        | 2026-02-12 | ACCEPTED           | PAID
+--  A3             | APP-2026-0003      | C3           | E1             | X2        | 2026-02-20 | REJECTED           | PENDING
+--  A4             | APP-2026-0004      | C1           | E2             | X1        | 2026-06-10 | ACCEPTED           | PAID
+--  A5             | APP-2026-0005      | C4           | E2             | X1        | 2026-06-11 | ACCEPTED           | PAID
+--  A6             | APP-2026-0006      | C5           | E2             | X2        | 2026-06-15 | ACCEPTED           | PAID
+--  A7             | APP-2026-0007      | C2           | E2             | X2        | 2026-06-20 | ACCEPTED           | PAID
+--  A8             | APP-2026-0008      | C1           | E3             | X1        | 2026-10-05 | SUBMITTED          | PAID
+--  A9             | APP-2026-0009      | C4           | E3             | X1        | 2026-10-07 | SUBMITTED          | PENDING
+--  A10            | APP-2026-0010      | C6           | E3             | X4        | 2026-10-09 | ACCEPTED           | PAID
+--  A11            | APP-2026-0011      | C3           | E3             | X2        | 2026-10-12 | REJECTED           | FAILED
+-- (11 rows)
+
+CREATE TABLE ADMIT_CARDS(
+    ADMIT_CARD_ID   VARCHAR(10),
+    APPLICATION_ID  VARCHAR(10) NOT NULL,
+    ROLL_NUMBER     VARCHAR(20) NOT NULL,
+    ISSUE_DATE      DATE        NOT NULL,
+    REPORTING_TIME  TIME        NOT NULL,
+    PRIMARY KEY(ADMIT_CARD_ID),
+    UNIQUE(APPLICATION_ID),
+    UNIQUE(ROLL_NUMBER),
+    FOREIGN KEY(APPLICATION_ID) REFERENCES APPLICATIONS(APPLICATION_ID) ON DELETE CASCADE);
+
+INSERT INTO ADMIT_CARDS VALUES
+    ('AC1','A1','ROLL-UPSC-0001','2026-05-01','08:00'),
+    ('AC2','A2','ROLL-UPSC-0002','2026-05-01','08:00'),
+    ('AC3','A4','ROLL-KPSC-0001','2026-09-01','09:00'),
+    ('AC4','A5','ROLL-KPSC-0002','2026-09-01','09:00'),
+    ('AC5','A6','ROLL-KPSC-0003','2026-09-01','09:00'),
+    ('AC6','A7','ROLL-KPSC-0004','2026-09-01','09:00');
+
+SELECT * FROM ADMIT_CARDS;
+
+-- OUTPUT:
+--  admit_card_id | application_id | roll_number    | issue_date | reporting_time
+-- ---------------+----------------+----------------+------------+----------------
+--  AC1           | A1             | ROLL-UPSC-0001 | 2026-05-01 | 08:00:00
+--  AC2           | A2             | ROLL-UPSC-0002 | 2026-05-01 | 08:00:00
+--  AC3           | A4             | ROLL-KPSC-0001 | 2026-09-01 | 09:00:00
+--  AC4           | A5             | ROLL-KPSC-0002 | 2026-09-01 | 09:00:00
+--  AC5           | A6             | ROLL-KPSC-0003 | 2026-09-01 | 09:00:00
+--  AC6           | A7             | ROLL-KPSC-0004 | 2026-09-01 | 09:00:00
+-- (6 rows)
+
+CREATE TABLE RESULTS(
+    RESULT_ID       VARCHAR(10),
+    APPLICATION_ID  VARCHAR(10) NOT NULL,
+    MARKS_OBTAINED  NUMERIC(6,2) NOT NULL,
+    MAXIMUM_MARKS   NUMERIC(6,2) NOT NULL,
+    PERCENTAGE      NUMERIC(5,2),
+    RANK            INT,
+    RESULT_STATUS   VARCHAR(10) NOT NULL,
+    PUBLISHED_AT    DATE,
+    PRIMARY KEY(RESULT_ID),
+    UNIQUE(APPLICATION_ID),
+    FOREIGN KEY(APPLICATION_ID) REFERENCES APPLICATIONS(APPLICATION_ID) ON DELETE CASCADE);
+
+INSERT INTO RESULTS VALUES
+    ('R1','A1',105.00,200,NULL,2,'PASS','2026-06-20'),
+    ('R2','A2',142.00,200,NULL,1,'PASS','2026-06-20'),
+    ('R3','A4',98.00,150,NULL,3,'PASS','2026-10-05'),
+    ('R4','A5',112.50,150,NULL,2,'PASS','2026-10-05'),
+    ('R5','A6',55.50,150,NULL,4,'FAIL',NULL),
+    ('R6','A7',121.00,150,NULL,1,'PASS','2026-10-05');
+
+SELECT * FROM RESULTS;
+
+-- OUTPUT:
+--  result_id | application_id | marks_obtained | maximum_marks | percentage | rank | result_status | published_at
+-- -----------+----------------+----------------+---------------+------------+------+---------------+--------------
+--  R1        | A1             | 105.00         | 200.00        |            | 2    | PASS          | 2026-06-20
+--  R2        | A2             | 142.00         | 200.00        |            | 1    | PASS          | 2026-06-20
+--  R3        | A4             | 98.00          | 150.00        |            | 3    | PASS          | 2026-10-05
+--  R4        | A5             | 112.50         | 150.00        |            | 2    | PASS          | 2026-10-05
+--  R5        | A6             | 55.50          | 150.00        |            | 4    | FAIL          |
+--  R6        | A7             | 121.00         | 150.00        |            | 1    | PASS          | 2026-10-05
+-- (6 rows)
+
+-- ----------------------------------------------------------------------------
+-- 1. Find all the candidates who have applied for at least one examination at the
+--    "Mangaluru" exam center.
+-- ----------------------------------------------------------------------------
+select distinct c.candidate_id, c.full_name
+from candidates c, applications a, exam_centers x
+where x.city = 'MANGALURU'
+  and x.center_id = a.center_id
+  and a.candidate_id = c.candidate_id
+order by c.candidate_id;
+
+-- OUTPUT:
+--  candidate_id | full_name
+-- --------------+--------------
+--  C1           | RAHUL SHARMA
+--  C4           | ANITA DSOUZA
+-- (2 rows)
+
+-- ----------------------------------------------------------------------------
+-- 2. Find the name of the candidate who has scored the highest marks among all the
+--    candidates.
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, e.examination_code, r.marks_obtained
+from candidates c, applications a, examinations e, results r
+where c.candidate_id = a.candidate_id
+  and a.examination_id = e.examination_id
+  and a.application_id = r.application_id
+  and r.marks_obtained = (select max(marks_obtained) from results);
+
+-- OUTPUT:
+--  candidate_id | full_name   | examination_code | marks_obtained
+-- --------------+-------------+------------------+----------------
+--  C2           | PRIYA PATEL | UPSC-CSP-2026    | 142.00
+-- (1 row)
+
+-- ----------------------------------------------------------------------------
+-- 3. Retrieve the candidate name and examination fee of the candidates who have paid
+--    the application fee more than Rs. 200.
+-- ----------------------------------------------------------------------------
+select c.full_name, e.examination_name, e.application_fee
+from candidates c, applications a, examinations e
+where c.candidate_id = a.candidate_id
+  and a.examination_id = e.examination_id
+  and a.payment_status = 'PAID'
+  and e.application_fee > 200
+order by c.full_name;
+
+-- OUTPUT:
+--  full_name    | examination_name         | application_fee
+-- --------------+--------------------------+-----------------
+--  ANITA DSOUZA | FIRST DIVISION ASSISTANT | 300.00
+--  PRIYA PATEL  | FIRST DIVISION ASSISTANT | 300.00
+--  RAHUL SHARMA | FIRST DIVISION ASSISTANT | 300.00
+--  SUMANTH RAO  | FIRST DIVISION ASSISTANT | 300.00
+-- (4 rows)
+
+-- ----------------------------------------------------------------------------
+-- 4. Retrieve the details of the exam center with maximum and minimum capacity among
+--    the various exam centers.
+-- ----------------------------------------------------------------------------
+select center_code, center_name, city, total_capacity from exam_centers
+where total_capacity = (select max(total_capacity) from exam_centers)
+union
+select center_code, center_name, city, total_capacity from exam_centers
+where total_capacity = (select min(total_capacity) from exam_centers)
+order by total_capacity desc;
+
+-- OUTPUT:
+--  center_code | center_name       | city  | total_capacity
+-- -------------+-------------------+-------+----------------
+--  DEL-01      | DU EXAM HALL      | DELHI | 1000
+--  UDP-01      | MANIPAL EXAM HALL | UDUPI | 300
+-- (2 rows)
+
+-- ----------------------------------------------------------------------------
+-- 5. Demonstrate how you delete all application tuples at every exam center located in
+--    a specific city.
+--    (ADMIT_CARDS and RESULTS rows of these applications are removed automatically by
+--    ON DELETE CASCADE. We use BEGIN ... ROLLBACK so the data is restored for the next queries.)
+-- ----------------------------------------------------------------------------
 BEGIN;
-UPDATE public.candidates
-SET phone_number = '9876543210',
-    address = 'Flat 402, Shanti Vihar, Sector 15',
-    city = 'New Delhi',
-    pincode = '110001',
-    updated_at = NOW()
-WHERE candidate_number = 'CND-2026-1001';
+SET search_path TO grems_lab;
 
--- Verification of update
-SELECT candidate_number, full_name, phone_number, address, city, pincode, updated_at
-FROM public.candidates
-WHERE candidate_number = 'CND-2026-1001';
-ROLLBACK; -- Preserves original database state
+select (select count(*) from applications) as applications,
+       (select count(*) from admit_cards)  as admit_cards,
+       (select count(*) from results)      as results;
 
--- 2.2 Demonstrate UPDATE of an examination status to 'completed'
-BEGIN;
-UPDATE public.examinations
-SET examination_status = 'completed',
-    updated_at = NOW()
-WHERE examination_code = 'RRB-NTPC-2026'
-  AND examination_status = 'published';
+-- OUTPUT:
+--  applications | admit_cards | results
+-- --------------+-------------+---------
+--  11           | 6           | 6
+-- (1 row)
 
--- Verification of status update
-SELECT examination_code, examination_name, examination_status, updated_at
-FROM public.examinations
-WHERE examination_code = 'RRB-NTPC-2026';
+delete from applications
+where center_id in (select center_id from exam_centers where city = 'MANGALURU');
+
+-- OUTPUT: DELETE 5
+
+select (select count(*) from applications) as applications,
+       (select count(*) from admit_cards)  as admit_cards,
+       (select count(*) from results)      as results;
+
+-- OUTPUT:
+--  applications | admit_cards | results
+-- --------------+-------------+---------
+--  6            | 3           | 3
+-- (1 row)
+
 ROLLBACK;
+SET search_path TO grems_lab;
 
--- 2.3 Demonstrate safe DELETE of a test application record
+-- ============================================================================
+-- EXPERIMENT 2 :  EXAMINATION DETAILS, DELETE WITH CASCADE, PARTITION AND VIEW
+-- ============================================================================
+
+-- 2. Consider the GREMS schema given in Experiment 1 (tables already created above).
+--
+--    Write SQL queries to
+--    1. Retrieve details of all examinations - id, code, name, conducting authority,
+--       number of centers, seats allocated, number of applications, etc.
+--    2. Get the particulars of candidates who have applied for 2 or more examinations,
+--       but only from Jan 2026 to Jun 2026.
+--    3. Delete an examination in EXAMINATIONS table. Update the contents of other
+--       tables to reflect this data manipulation operation.
+--    4. Partition the EXAMINATIONS data based on the date of examination. Demonstrate its
+--       working with a simple query.
+--    5. Create a view of all examinations and the number of seats that are currently
+--       available for applicants.
+
+-- ----------------------------------------------------------------------------
+-- SOLUTIONS:
+-- ----------------------------------------------------------------------------
+SET search_path TO grems_lab;
+
+
+-- ----------------------------------------------------------------------------
+-- 1. Retrieve details of all examinations - id, code, name, conducting authority,
+--    number of centers, seats allocated, number of applications, etc.
+-- ----------------------------------------------------------------------------
+select e.examination_id, e.examination_code, e.examination_name, e.conducting_authority,
+       (select count(*) from examination_centers ec
+        where ec.examination_id = e.examination_id) as no_of_centers,
+       (select sum(ec.allocated_capacity) from examination_centers ec
+        where ec.examination_id = e.examination_id) as seats_allocated,
+       (select count(*) from applications a
+        where a.examination_id = e.examination_id) as no_of_applications
+from examinations e
+order by e.examination_id;
+
+-- OUTPUT:
+--  examination_id | examination_code | examination_name         | conducting_authority | no_of_centers | seats_allocated | no_of_applications
+-- ----------------+------------------+--------------------------+----------------------+---------------+-----------------+--------------------
+--  E1             | UPSC-CSP-2026    | CIVIL SERVICES PRELIMS   | UPSC                 | 3             | 1200            | 3
+--  E2             | KPSC-FDA-2026    | FIRST DIVISION ASSISTANT | KPSC                 | 2             | 550             | 4
+--  E3             | SSC-CGL-2026     | COMBINED GRADUATE LEVEL  | SSC                  | 3             | 750             | 4
+--  E4             | IBPS-PO-2027     | PROBATIONARY OFFICER     | IBPS                 | 2             | 550             | 0
+-- (4 rows)
+
+-- ----------------------------------------------------------------------------
+-- 2. Get the particulars of candidates who have applied for 2 or more examinations,
+--    but only from Jan 2026 to Jun 2026.
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, c.phone_number, c.city, count(*) as no_of_applications
+from candidates c, applications a
+where c.candidate_id = a.candidate_id
+  and a.applied_at between '2026-01-01' and '2026-06-30'
+group by c.candidate_id, c.full_name, c.phone_number, c.city
+having count(*) >= 2
+order by c.candidate_id;
+
+-- OUTPUT:
+--  candidate_id | full_name    | phone_number | city      | no_of_applications
+-- --------------+--------------+--------------+-----------+--------------------
+--  C1           | RAHUL SHARMA | 9845012345   | MANGALURU | 2
+--  C2           | PRIYA PATEL  | 9825098765   | AHMEDABAD | 2
+-- (2 rows)
+
+-- ----------------------------------------------------------------------------
+-- 3. Delete an examination in EXAMINATIONS table. Update the contents of other
+--    tables to reflect this data manipulation operation.
+--    (Rows of EXAMINATION_CENTERS referring to the examination are deleted automatically
+--    because of ON DELETE CASCADE. BEGIN ... ROLLBACK keeps the sample data intact.)
+-- ----------------------------------------------------------------------------
 BEGIN;
-DELETE FROM public.applications
-WHERE application_number = 'APP-TEST-9999'
-  AND application_status = 'withdrawn';
+SET search_path TO grems_lab;
 
--- Verification of deletion
-SELECT application_id, application_number, application_status
-FROM public.applications
-WHERE application_number = 'APP-TEST-9999';
+select * from examination_centers where examination_id = 'E4';
+
+-- OUTPUT:
+--  examination_id | center_id | allocated_capacity
+-- ----------------+-----------+--------------------
+--  E4             | X3        | 400
+--  E4             | X5        | 150
+-- (2 rows)
+
+delete from examinations where examination_id = 'E4';
+
+-- OUTPUT: DELETE 1
+
+select * from examination_centers where examination_id = 'E4';
+
+-- OUTPUT:
+--  examination_id | center_id | allocated_capacity
+-- ----------------+-----------+--------------------
+-- (0 rows)
+
 ROLLBACK;
+SET search_path TO grems_lab;
 
+-- ----------------------------------------------------------------------------
+-- 4. Partition the EXAMINATIONS data based on the date of examination. Demonstrate its
+--    working with a simple query.
+--    (PostgreSQL uses declarative partitioning: every partition is itself a table, so we
+--    read a partition by its name.)
+-- ----------------------------------------------------------------------------
+CREATE TABLE EXAMINATION_ARCHIVE(
+    EXAMINATION_ID        VARCHAR(10),
+    EXAMINATION_CODE      VARCHAR(20),
+    EXAMINATION_NAME      VARCHAR(40),
+    CONDUCTING_AUTHORITY  VARCHAR(20),
+    EXAMINATION_DATE      DATE NOT NULL,
+    TOTAL_VACANCIES       INT,
+    PRIMARY KEY(EXAMINATION_ID, EXAMINATION_DATE))
+PARTITION BY RANGE(EXAMINATION_DATE);
 
--- ============================================================================
--- 3. TRADITIONAL JOINS USING WHERE CONDITIONS
--- Concepts: Relational algebra theta joins and Cartesian products filtered by
---           WHERE join predicates (comma-separated table syntax from lab manual).
--- ============================================================================
+CREATE TABLE EXAM_P2026_H1 PARTITION OF EXAMINATION_ARCHIVE FOR VALUES FROM ('2026-01-01') TO ('2026-07-01');
 
--- 3.1 Candidates who applied for exams conducted by a specified authority (Traditional join)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    c.category,
-    e.examination_name,
-    e.conducting_authority,
-    a.application_number
-FROM public.candidates c, public.applications a, public.examinations e
-WHERE c.candidate_id = a.candidate_id
-  AND a.examination_id = e.examination_id
-  AND e.conducting_authority = 'Staff Selection Commission'
-ORDER BY c.full_name ASC;
+CREATE TABLE EXAM_P2026_H2 PARTITION OF EXAMINATION_ARCHIVE FOR VALUES FROM ('2026-07-01') TO ('2027-01-01');
 
--- 3.2 Examination venues, assigned cities, and allocated capacity (Traditional join)
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    ec.center_code,
-    ec.center_name,
-    ec.city,
-    jc.allocated_capacity
-FROM public.examinations e, public.exam_centers ec, public.examination_centers jc
-WHERE e.examination_id = jc.examination_id
-  AND ec.center_id = jc.center_id
-ORDER BY e.examination_name, ec.city;
+CREATE TABLE EXAM_P2027    PARTITION OF EXAMINATION_ARCHIVE FOR VALUES FROM ('2027-01-01') TO ('2028-01-01');
 
--- 3.3 Candidate demographic details with application numbers (Traditional 2-table join)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    a.application_number,
-    a.application_status,
-    a.applied_at
-FROM public.candidates c, public.applications a
-WHERE c.candidate_id = a.candidate_id
-ORDER BY a.applied_at DESC;
+INSERT INTO EXAMINATION_ARCHIVE
+select examination_id, examination_code, examination_name, conducting_authority,
+       examination_date, total_vacancies
+from examinations;
 
+SELECT * FROM EXAM_P2026_H1;
 
--- ============================================================================
--- 4. INNER JOIN, LEFT JOIN, AND MULTI-TABLE JOINS
--- Concepts: ANSI standard JOIN syntax (INNER JOIN, LEFT OUTER JOIN, and
---           n-table associative joins across recruitment entities).
--- ============================================================================
+-- OUTPUT:
+--  examination_id | examination_code | examination_name       | conducting_authority | examination_date | total_vacancies
+-- ----------------+------------------+------------------------+----------------------+------------------+-----------------
+--  E1             | UPSC-CSP-2026    | CIVIL SERVICES PRELIMS | UPSC                 | 2026-05-24       | 979
+-- (1 row)
 
--- 4.1 Candidate application details (ANSI INNER JOIN)
-SELECT 
-    c.candidate_number,
-    c.full_name AS candidate_name,
-    a.application_number,
-    e.examination_code,
-    e.examination_name,
-    a.application_status,
-    a.applied_at
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-ORDER BY a.applied_at DESC;
+select tableoid::regclass as partition_name, examination_code, examination_date
+from examination_archive
+order by examination_date;
 
--- 4.2 Candidate academic qualifications (INNER JOIN)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    eq.qualification_level,
-    eq.institution_name,
-    eq.board_or_university,
-    eq.passing_year,
-    eq.percentage
-FROM public.candidates c
-INNER JOIN public.educational_qualifications eq ON c.candidate_id = eq.candidate_id
-ORDER BY c.candidate_number ASC, eq.passing_year DESC;
+-- OUTPUT:
+--  partition_name | examination_code | examination_date
+-- ----------------+------------------+------------------
+--  exam_p2026_h1  | UPSC-CSP-2026    | 2026-05-24
+--  exam_p2026_h2  | KPSC-FDA-2026    | 2026-09-20
+--  exam_p2027     | SSC-CGL-2026     | 2027-01-18
+--  exam_p2027     | IBPS-PO-2027     | 2027-04-12
+-- (4 rows)
 
--- 4.3 All examinations with their application count, including exams with 0 applications (LEFT JOIN)
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    e.conducting_authority,
-    COUNT(a.application_id) AS total_applications
-FROM public.examinations e
-LEFT JOIN public.applications a ON e.examination_id = a.examination_id
-GROUP BY e.examination_id, e.examination_code, e.examination_name, e.conducting_authority
-ORDER BY total_applications DESC;
+-- Partition pruning: only the partition EXAM_P2026_H2 is scanned for this date range.
+explain (costs off)
+select * from examination_archive
+where examination_date between '2026-07-01' and '2026-12-31';
 
--- 4.4 Multi-Table 4-Way Join: Candidate, Examination, Assigned Center, and Admit Card
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    e.examination_code,
-    e.examination_name,
-    ec.center_name AS examination_venue,
-    ec.city AS venue_city,
-    ac.roll_number,
-    ac.issue_date,
-    ac.reporting_time
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-INNER JOIN public.exam_centers ec ON a.center_id = ec.center_id
-INNER JOIN public.admit_cards ac ON a.application_id = ac.application_id
-ORDER BY e.examination_code, ac.roll_number ASC;
+-- OUTPUT:
+--  QUERY PLAN
+-- ---------------------------------------------------------------------------------------------------
+--  Seq Scan on exam_p2026_h2 examination_archive
+--    Filter: ((examination_date >= '2026-07-01'::date) AND (examination_date <= '2026-12-31'::date))
+-- (2 rows)
 
+-- ----------------------------------------------------------------------------
+-- 5. Create a view of all examinations and the number of seats that are currently
+--    available for applicants.
+-- ----------------------------------------------------------------------------
+Create view available_seats
+As select e.examination_id, e.examination_name,
+   (select sum(ec.allocated_capacity) from examination_centers ec
+    where ec.examination_id = e.examination_id)
+ - (select count(*) from applications a
+    where a.examination_id = e.examination_id
+      and a.application_status <> 'REJECTED') as seats_available
+from examinations e;
+
+SELECT * FROM AVAILABLE_SEATS ORDER BY EXAMINATION_ID;
+
+-- OUTPUT:
+--  examination_id | examination_name         | seats_available
+-- ----------------+--------------------------+-----------------
+--  E1             | CIVIL SERVICES PRELIMS   | 1198
+--  E2             | FIRST DIVISION ASSISTANT | 546
+--  E3             | COMBINED GRADUATE LEVEL  | 747
+--  E4             | PROBATIONARY OFFICER     | 550
+-- (4 rows)
 
 -- ============================================================================
--- 5. NESTED QUERIES AND SUBQUERIES
--- Concepts: Scalar subqueries, multi-row subqueries with IN / ANY, and
---           correlated subqueries evaluated once per outer row.
+-- EXPERIMENT 3 :  CANDIDATE DETAILS, VIEW, UPDATE AND CATEGORISATION OF RESULTS
 -- ============================================================================
 
--- 5.1 Candidates who obtained marks strictly above the overall average marks (Scalar Subquery)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    e.examination_name,
-    r.marks_obtained,
-    r.maximum_marks,
-    ROUND((SELECT AVG(marks_obtained) FROM public.results WHERE published_at IS NOT NULL), 2) AS overall_average
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-INNER JOIN public.results r ON a.application_id = r.application_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE r.published_at IS NOT NULL
-  AND r.marks_obtained > (
-      SELECT AVG(marks_obtained)
-      FROM public.results
-      WHERE published_at IS NOT NULL
-  )
-ORDER BY r.marks_obtained DESC;
+-- 3. Consider the GREMS schema given in Experiment 1 (tables already created above).
+--
+--    Write SQL queries to
+--    1. List all the candidate details who have an ACCEPTED application for the
+--       examination "KPSC-FDA-2026", along with their bachelor's degree percentage.
+--    2. Compute the total number of male and female candidates in each examination.
+--    3. Create a view of the marks of candidate "C1" in all the examinations.
+--    4. Calculate the Percentage (Marks_obtained * 100 / Maximum_marks) and update the
+--       corresponding table for all candidates.
+--    5. Categorize candidates based on the following criterion:
+--         If Percentage >= 75 then CATEGORY = "OUTSTANDING"
+--         If Percentage >= 60 then CATEGORY = "GOOD"
+--         If Percentage >= 40 then CATEGORY = "AVERAGE"
+--         If Percentage <  40 then CATEGORY = "WEAK"
+--       Give these details only for the examinations conducted by UPSC and KPSC.
 
--- 5.2 Examinations whose application fee is higher than the average application fee
-SELECT 
-    examination_code,
-    examination_name,
-    conducting_authority,
-    application_fee
-FROM public.examinations
-WHERE application_fee > (
-    SELECT AVG(application_fee)
-    FROM public.examinations
-)
-ORDER BY application_fee DESC;
-
--- 5.3 Candidates who scored above the average score of their specific examination (Correlated Subquery)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    e.examination_code,
-    e.examination_name,
-    r.marks_obtained
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-INNER JOIN public.results r ON a.application_id = r.application_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE r.marks_obtained > (
-    SELECT AVG(r2.marks_obtained)
-    FROM public.results r2
-    INNER JOIN public.applications a2 ON r2.application_id = a2.application_id
-    WHERE a2.examination_id = a.examination_id
-)
-ORDER BY e.examination_code, r.marks_obtained DESC;
-
--- 5.4 Examination that received the highest number of submitted applications (Nested Subquery)
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    COUNT(a.application_id) AS application_count
-FROM public.examinations e
-INNER JOIN public.applications a ON e.examination_id = a.examination_id
-GROUP BY e.examination_id, e.examination_code, e.examination_name
-HAVING COUNT(a.application_id) = (
-    SELECT MAX(app_count)
-    FROM (
-        SELECT COUNT(application_id) AS app_count
-        FROM public.applications
-        GROUP BY examination_id
-    ) AS counts
-);
+-- ----------------------------------------------------------------------------
+-- SOLUTIONS:
+-- ----------------------------------------------------------------------------
+SET search_path TO grems_lab;
 
 
--- ============================================================================
--- 6. AGGREGATE FUNCTIONS: COUNT, SUM, AVG, MIN, MAX
--- Concepts: Columnar summarization, mathematical aggregates, and domain metrics.
--- ============================================================================
+-- ----------------------------------------------------------------------------
+-- 1. List all the candidate details who have an ACCEPTED application for the
+--    examination "KPSC-FDA-2026", along with their bachelor's degree percentage.
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, c.gender, c.city, q.percentage
+from candidates c, applications a, examinations e, educational_qualifications q
+where e.examination_code = 'KPSC-FDA-2026'
+  and a.examination_id = e.examination_id
+  and a.candidate_id = c.candidate_id
+  and a.application_status = 'ACCEPTED'
+  and q.candidate_id = c.candidate_id
+  and q.qualification_level = 'BACHELORS'
+order by c.candidate_id;
 
--- 6.1 Total recruitment vacancies declared across all government examinations (SUM)
-SELECT 
-    SUM(total_vacancies) AS aggregate_vacancies_declared,
-    COUNT(examination_id) AS total_examinations_conducted
-FROM public.examinations;
+-- OUTPUT:
+--  candidate_id | full_name    | gender | city      | percentage
+-- --------------+--------------+--------+-----------+------------
+--  C1           | RAHUL SHARMA | MALE   | MANGALURU | 78.50
+--  C2           | PRIYA PATEL  | FEMALE | AHMEDABAD | 72.40
+--  C4           | ANITA DSOUZA | FEMALE | UDUPI     | 81.00
+--  C5           | SUMANTH RAO  | MALE   | BENGALURU | 66.75
+-- (4 rows)
 
--- 6.2 Application fee metrics across recruitment examinations (MIN, MAX, AVG)
-SELECT 
-    MIN(application_fee) AS minimum_fee,
-    MAX(application_fee) AS maximum_fee,
-    ROUND(AVG(application_fee), 2) AS average_application_fee
-FROM public.examinations;
+-- ----------------------------------------------------------------------------
+-- 2. Compute the total number of male and female candidates in each examination.
+-- ----------------------------------------------------------------------------
+select e.examination_code, c.gender, count(*) as total
+from candidates c, applications a, examinations e
+where c.candidate_id = a.candidate_id
+  and a.examination_id = e.examination_id
+group by e.examination_code, c.gender
+order by e.examination_code, c.gender;
 
--- 6.3 Seating capacity statistics across all physical examination centers (SUM, AVG)
-SELECT 
-    COUNT(center_id) AS total_centers_registered,
-    SUM(total_capacity) AS total_seating_capacity,
-    ROUND(AVG(total_capacity), 1) AS average_venue_capacity
-FROM public.exam_centers;
+-- OUTPUT:
+--  examination_code | gender | total
+-- ------------------+--------+-------
+--  KPSC-FDA-2026    | FEMALE | 2
+--  KPSC-FDA-2026    | MALE   | 2
+--  SSC-CGL-2026     | FEMALE | 2
+--  SSC-CGL-2026     | MALE   | 2
+--  UPSC-CSP-2026    | FEMALE | 1
+--  UPSC-CSP-2026    | MALE   | 2
+-- (6 rows)
 
--- 6.4 Highest and lowest percentage secured by candidates in qualifying exams (MIN, MAX)
-SELECT 
-    qualification_level,
-    MIN(percentage) AS minimum_percentage,
-    MAX(percentage) AS maximum_percentage,
-    ROUND(AVG(percentage), 2) AS average_percentage
-FROM public.educational_qualifications
-GROUP BY qualification_level;
+-- ----------------------------------------------------------------------------
+-- 3. Create a view of the marks of candidate "C1" in all the examinations.
+-- ----------------------------------------------------------------------------
+Create view c1_results As
+select e.examination_code, r.marks_obtained, r.maximum_marks
+from applications a, examinations e, results r
+where a.candidate_id = 'C1'
+  and a.examination_id = e.examination_id
+  and r.application_id = a.application_id;
 
+SELECT * FROM C1_RESULTS;
 
--- ============================================================================
--- 7. GROUP BY AND HAVING
--- Concepts: Grouping sets, grouped aggregations, and post-aggregation filters.
--- ============================================================================
+-- OUTPUT:
+--  examination_code | marks_obtained | maximum_marks
+-- ------------------+----------------+---------------
+--  UPSC-CSP-2026    | 105.00         | 200.00
+--  KPSC-FDA-2026    | 98.00          | 150.00
+-- (2 rows)
 
--- 7.1 Count applications submitted per examination (GROUP BY)
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    e.conducting_authority,
-    COUNT(a.application_id) AS total_applications
-FROM public.examinations e
-LEFT JOIN public.applications a ON e.examination_id = a.examination_id
-GROUP BY e.examination_id, e.examination_code, e.examination_name, e.conducting_authority
-ORDER BY total_applications DESC;
+-- ----------------------------------------------------------------------------
+-- 4. Calculate the Percentage (Marks_obtained * 100 / Maximum_marks) and update the
+--    corresponding table for all candidates.
+-- ----------------------------------------------------------------------------
+update results set percentage = round(marks_obtained * 100 / maximum_marks, 2);
 
--- 7.2 Examinations having more than a specified threshold of applications (HAVING)
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    COUNT(a.application_id) AS application_count
-FROM public.examinations e
-INNER JOIN public.applications a ON e.examination_id = a.examination_id
-GROUP BY e.examination_id, e.examination_code, e.examination_name
-HAVING COUNT(a.application_id) > 1
-ORDER BY application_count DESC;
+-- OUTPUT: UPDATE 6
 
--- 7.3 Candidates who submitted more than one application (HAVING)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    c.category,
-    COUNT(a.application_id) AS applications_count
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-GROUP BY c.candidate_id, c.candidate_number, c.full_name, c.category
-HAVING COUNT(a.application_id) > 1
-ORDER BY applications_count DESC;
+select result_id, application_id, marks_obtained, maximum_marks, percentage from results order by result_id;
 
--- 7.4 Test centers where total allocated seats across exams exceed 400 (HAVING)
-SELECT 
-    ec.center_code,
-    ec.center_name,
-    ec.city,
-    ec.total_capacity,
-    SUM(jc.allocated_capacity) AS total_allocated_seats
-FROM public.exam_centers ec
-INNER JOIN public.examination_centers jc ON ec.center_id = jc.center_id
-GROUP BY ec.center_id, ec.center_code, ec.center_name, ec.city, ec.total_capacity
-HAVING SUM(jc.allocated_capacity) > 400
-ORDER BY total_allocated_seats DESC;
+-- OUTPUT:
+--  result_id | application_id | marks_obtained | maximum_marks | percentage
+-- -----------+----------------+----------------+---------------+------------
+--  R1        | A1             | 105.00         | 200.00        | 52.50
+--  R2        | A2             | 142.00         | 200.00        | 71.00
+--  R3        | A4             | 98.00          | 150.00        | 65.33
+--  R4        | A5             | 112.50         | 150.00        | 75.00
+--  R5        | A6             | 55.50          | 150.00        | 37.00
+--  R6        | A7             | 121.00         | 150.00        | 80.67
+-- (6 rows)
 
--- 7.5 Conducting authorities managing more than one recruitment examination (HAVING)
-SELECT 
-    conducting_authority,
-    COUNT(examination_id) AS examinations_conducted,
-    SUM(total_vacancies) AS aggregate_vacancies
-FROM public.examinations
-GROUP BY conducting_authority
-HAVING COUNT(examination_id) > 1
-ORDER BY examinations_conducted DESC;
+-- ----------------------------------------------------------------------------
+-- 5. Categorize candidates based on the percentage. Give these details only for the
+--    examinations conducted by UPSC and KPSC.
+-- ----------------------------------------------------------------------------
+select c.full_name, e.examination_code, r.percentage,
+       case when r.percentage >= 75 then 'OUTSTANDING'
+            when r.percentage >= 60 then 'GOOD'
+            when r.percentage >= 40 then 'AVERAGE'
+            else 'WEAK' end as category
+from candidates c, applications a, examinations e, results r
+where c.candidate_id = a.candidate_id
+  and a.examination_id = e.examination_id
+  and a.application_id = r.application_id
+  and e.conducting_authority in ('UPSC','KPSC')
+order by r.percentage desc;
 
+-- OUTPUT:
+--  full_name    | examination_code | percentage | category
+-- --------------+------------------+------------+-------------
+--  PRIYA PATEL  | KPSC-FDA-2026    | 80.67      | OUTSTANDING
+--  ANITA DSOUZA | KPSC-FDA-2026    | 75.00      | OUTSTANDING
+--  PRIYA PATEL  | UPSC-CSP-2026    | 71.00      | GOOD
+--  RAHUL SHARMA | KPSC-FDA-2026    | 65.33      | GOOD
+--  RAHUL SHARMA | UPSC-CSP-2026    | 52.50      | AVERAGE
+--  SUMANTH RAO  | KPSC-FDA-2026    | 37.00      | WEAK
+-- (6 rows)
 
 -- ============================================================================
--- 8. DATE OPERATIONS AND BETWEEN
--- Concepts: PostgreSQL DATE literals, calendar interval additions, and BETWEEN.
+-- EXPERIMENT 4 :  NESTED QUERIES, NOT EXISTS, NOT IN AND GROUP BY ... HAVING
 -- ============================================================================
 
--- 8.1 Retrieve applications submitted within a specific date range
-SELECT 
-    a.application_number,
-    c.full_name AS candidate_name,
-    e.examination_name,
-    a.applied_at,
-    a.application_status
-FROM public.applications a
-INNER JOIN public.candidates c ON a.candidate_id = c.candidate_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE a.applied_at BETWEEN DATE '2026-01-01' AND DATE '2026-02-01' + INTERVAL '1 day'
-ORDER BY a.applied_at ASC;
+-- 4. Consider the GREMS schema given in Experiment 1 (tables already created above).
+--
+--    Write SQL queries to
+--    1. Find the candidate name and marks of the candidate who has the second highest marks.
+--    2. For each candidate who has applied for more than two examinations, find the
+--       candidate_id and the best marks obtained by him or her.
+--    3. Find the names of the examinations such that all the candidates who appeared for
+--       them have scored more than 50 percent.
+--    4. Find the candidates whose application is ACCEPTED but whose admit card has not
+--       been issued yet.
+--    5. Find the exam centers where the total number of seats allocated (over all the
+--       examinations) is more than 800.
 
--- 8.2 Recruitment examinations scheduled within a target calendar quarter
-SELECT 
-    examination_code,
-    examination_name,
-    conducting_authority,
-    examination_date,
-    application_start_date,
-    application_end_date,
-    total_vacancies
-FROM public.examinations
-WHERE examination_date BETWEEN DATE '2026-05-01' AND DATE '2026-07-31'
-ORDER BY examination_date ASC;
-
--- 8.3 Count applications submitted per examination within a specified time window
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    COUNT(a.application_id) AS applications_in_window
-FROM public.examinations e
-INNER JOIN public.applications a ON e.examination_id = a.examination_id
-WHERE a.applied_at BETWEEN DATE '2026-01-15' AND DATE '2026-01-31' + INTERVAL '1 day'
-GROUP BY e.examination_id, e.examination_code, e.examination_name
-ORDER BY applications_in_window DESC;
+-- ----------------------------------------------------------------------------
+-- SOLUTIONS:
+-- ----------------------------------------------------------------------------
+SET search_path TO grems_lab;
 
 
--- ============================================================================
--- 9. UNION, UNION ALL, AND EXCEPT
--- Concepts: Relational set operations with matching column projections.
---           (EXCEPT represents PostgreSQL implementation of Oracle MINUS).
--- ============================================================================
+-- ----------------------------------------------------------------------------
+-- 1. Find the candidate name and marks of the candidate who has the second highest marks.
+-- ----------------------------------------------------------------------------
+select c.full_name, r.marks_obtained
+from candidates c, applications a, results r
+where c.candidate_id = a.candidate_id
+  and a.application_id = r.application_id
+  and r.marks_obtained = (select max(marks_obtained) from results
+                          where marks_obtained < (select max(marks_obtained) from results));
 
--- 9.1 Examinations with maximum and minimum application fees using UNION
-SELECT 
-    examination_code,
-    examination_name,
-    conducting_authority,
-    application_fee,
-    'MAXIMUM FEE' AS fee_classification
-FROM public.examinations
-WHERE application_fee = (SELECT MAX(application_fee) FROM public.examinations)
-UNION
-SELECT 
-    examination_code,
-    examination_name,
-    conducting_authority,
-    application_fee,
-    'MINIMUM FEE' AS fee_classification
-FROM public.examinations
-WHERE application_fee = (SELECT MIN(application_fee) FROM public.examinations)
-ORDER BY application_fee DESC;
+-- OUTPUT:
+--  full_name   | marks_obtained
+-- -------------+----------------
+--  PRIYA PATEL | 121.00
+-- (1 row)
 
--- 9.2 Distinct geographic cities (UNION: eliminates duplicate cities)
-SELECT city, 'Candidate Residence' AS location_source FROM public.candidates
-UNION
-SELECT city, 'Exam Venue Location' AS location_source FROM public.exam_centers
-ORDER BY city ASC;
+-- ----------------------------------------------------------------------------
+-- 2. For each candidate who has applied for more than two examinations, find the
+--    candidate_id and the best marks obtained by him or her.
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, count(*) as no_of_applications,
+       (select max(r.marks_obtained) from results r, applications a2
+        where a2.application_id = r.application_id
+          and a2.candidate_id = c.candidate_id) as best_marks
+from candidates c, applications a
+where c.candidate_id = a.candidate_id
+group by c.candidate_id, c.full_name
+having count(*) > 2;
 
--- 9.3 All geographic city records (UNION ALL: preserves duplicates for frequency)
-SELECT city, 'Candidate Residence' AS location_source FROM public.candidates
-UNION ALL
-SELECT city, 'Exam Venue Location' AS location_source FROM public.exam_centers
-ORDER BY city ASC;
+-- OUTPUT:
+--  candidate_id | full_name    | no_of_applications | best_marks
+-- --------------+--------------+--------------------+------------
+--  C1           | RAHUL SHARMA | 3                  | 105.00
+-- (1 row)
 
--- 9.4 Cities hosting examination venues where NO candidate currently resides (EXCEPT)
-SELECT city FROM public.exam_centers
-EXCEPT
-SELECT city FROM public.candidates
-ORDER BY city ASC;
+-- ----------------------------------------------------------------------------
+-- 3. Find the names of the examinations such that all the candidates who appeared for
+--    them have scored more than 50 percent.
+-- ----------------------------------------------------------------------------
+select e.examination_code, e.examination_name
+from examinations e
+where exists (select * from applications a, results r
+              where a.examination_id = e.examination_id
+                and a.application_id = r.application_id)
+  and not exists (select * from applications a, results r
+                  where a.examination_id = e.examination_id
+                    and a.application_id = r.application_id
+                    and r.percentage <= 50);
 
+-- OUTPUT:
+--  examination_code | examination_name
+-- ------------------+------------------------
+--  UPSC-CSP-2026    | CIVIL SERVICES PRELIMS
+-- (1 row)
 
--- ============================================================================
--- 10. EXISTS AND NOT EXISTS
--- Concepts: Semi-joins, anti-joins, and relational division (universal quantification).
--- ============================================================================
+-- ----------------------------------------------------------------------------
+-- 4. Find the candidates whose application is ACCEPTED but whose admit card has not
+--    been issued yet.
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, a.application_number, a.examination_id
+from candidates c, applications a
+where c.candidate_id = a.candidate_id
+  and a.application_status = 'ACCEPTED'
+  and a.application_id not in (select application_id from admit_cards);
 
--- 10.1 Candidates who have submitted at least one application (EXISTS)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    c.phone_number,
-    c.city,
-    c.category
-FROM public.candidates c
-WHERE EXISTS (
-    SELECT 1
-    FROM public.applications a
-    WHERE a.candidate_id = c.candidate_id
-)
-ORDER BY c.full_name ASC;
+-- OUTPUT:
+--  candidate_id | full_name   | application_number | examination_id
+-- --------------+-------------+--------------------+----------------
+--  C6           | FATIMA KHAN | APP-2026-0010      | E3
+-- (1 row)
 
--- 10.2 Candidates who have NOT submitted any application (NOT EXISTS)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    c.phone_number,
-    c.city,
-    c.category
-FROM public.candidates c
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.applications a
-    WHERE a.candidate_id = c.candidate_id
-)
-ORDER BY c.full_name ASC;
+-- ----------------------------------------------------------------------------
+-- 5. Find the exam centers where the total number of seats allocated (over all the
+--    examinations) is more than 800.
+-- ----------------------------------------------------------------------------
+select x.center_code, x.center_name, x.city, sum(ec.allocated_capacity) as total_allocated
+from exam_centers x, examination_centers ec
+where x.center_id = ec.center_id
+group by x.center_code, x.center_name, x.city
+having sum(ec.allocated_capacity) > 800
+order by total_allocated desc;
 
--- 10.3 Examinations without any allocated test centers (NOT EXISTS)
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    e.conducting_authority,
-    e.examination_date
-FROM public.examinations e
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.examination_centers jc
-    WHERE jc.examination_id = e.examination_id
-)
-ORDER BY e.examination_name ASC;
-
--- 10.4 Test centers that are currently NOT mapped to any examination (NOT EXISTS)
-SELECT 
-    ec.center_code,
-    ec.center_name,
-    ec.city,
-    ec.state,
-    ec.total_capacity
-FROM public.exam_centers ec
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.examination_centers jc
-    WHERE jc.center_id = ec.center_id
-)
-ORDER BY ec.center_name ASC;
-
--- 10.5 Relational Division: Candidates who applied for ALL exams conducted by 'Staff Selection Commission'
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    c.category
-FROM public.candidates c
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.examinations e
-    WHERE e.conducting_authority = 'Staff Selection Commission'
-      AND NOT EXISTS (
-          SELECT 1
-          FROM public.applications a
-          WHERE a.candidate_id = c.candidate_id
-            AND a.examination_id = e.examination_id
-      )
-)
-ORDER BY c.full_name ASC;
-
+-- OUTPUT:
+--  center_code | center_name      | city      | total_allocated
+-- -------------+------------------+-----------+-----------------
+--  BLR-01      | CHRIST EXAM HALL | BENGALURU | 1000
+--  DEL-01      | DU EXAM HALL     | DELHI     | 900
+-- (2 rows)
 
 -- ============================================================================
--- 11. HIGHEST AND SECOND-HIGHEST MARKS
--- Concepts: Relational order, maximum scalar evaluation, and subquery exclusion.
+-- EXPERIMENT 5 :  TRIGGERS AND FUNCTIONS
 -- ============================================================================
 
--- 11.1 Candidate(s) who obtained the highest marks in any recruitment examination
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    e.examination_name,
-    r.marks_obtained,
-    r.maximum_marks,
-    r.rank
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-INNER JOIN public.results r ON a.application_id = r.application_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE r.marks_obtained = (
-    SELECT MAX(marks_obtained)
-    FROM public.results
-);
+-- 5. Consider the GREMS schema given in Experiment 1 (tables already created above).
+--
+--    Write SQL programs to
+--    1. Create a trigger that stops the allocation of more seats to an exam center than
+--       its total capacity on the same examination date.
+--    2. Create a trigger that automatically calculates the Percentage and the
+--       Result_status (PASS if Percentage >= 40, otherwise FAIL) when a result is entered.
+--    3. Create a function that returns the number of seats still left at an exam center
+--       for an examination.
 
--- 11.2 Candidate who secured the second-highest marks (Nested subquery without LIMIT)
-SELECT 
-    c.candidate_number,
-    c.full_name,
-    e.examination_name,
-    r.marks_obtained,
-    r.maximum_marks
-FROM public.candidates c
-INNER JOIN public.applications a ON c.candidate_id = a.candidate_id
-INNER JOIN public.results r ON a.application_id = r.application_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE r.marks_obtained = (
-    SELECT MAX(marks_obtained)
-    FROM public.results
-    WHERE marks_obtained < (
-        SELECT MAX(marks_obtained)
-        FROM public.results
-    )
-);
+-- ----------------------------------------------------------------------------
+-- SOLUTIONS:
+-- ----------------------------------------------------------------------------
+SET search_path TO grems_lab;
 
 
--- ============================================================================
--- 12. VIEWS AND VIEW-BASED QUERIES
--- Concepts: CREATE OR REPLACE VIEW, data abstraction, encapsulation of complex
---           multi-table joins, and view querying.
--- ============================================================================
+-- ----------------------------------------------------------------------------
+-- 1. Create a trigger that stops the allocation of more seats to an exam center than
+--    its total capacity on the same examination date.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION validate_center_capacity() RETURNS TRIGGER AS $$
+DECLARE
+    v_total  INT;
+    v_date   DATE;
+    v_other  INT;
+BEGIN
+    select total_capacity into v_total from exam_centers where center_id = new.center_id;
+    select examination_date into v_date from examinations where examination_id = new.examination_id;
 
--- 12.1 View: Candidate profile with aggregated application count
-CREATE OR REPLACE VIEW public.view_candidate_application_summary AS
-SELECT 
-    c.candidate_id,
-    c.candidate_number,
-    c.full_name,
-    c.gender,
-    c.city,
-    c.category,
-    COUNT(a.application_id) AS total_applications_submitted
-FROM public.candidates c
-LEFT JOIN public.applications a ON c.candidate_id = a.candidate_id
-GROUP BY c.candidate_id, c.candidate_number, c.full_name, c.gender, c.city, c.category;
+    -- seats already given to other examinations held at this center on the same date
+    select coalesce(sum(ec.allocated_capacity), 0) into v_other
+    from examination_centers ec, examinations e
+    where ec.examination_id = e.examination_id
+      and ec.center_id = new.center_id
+      and e.examination_date = v_date
+      and ec.examination_id <> new.examination_id;
 
--- Query View 1
-SELECT * FROM public.view_candidate_application_summary
-ORDER BY total_applications_submitted DESC;
+    if new.allocated_capacity > v_total or v_other + new.allocated_capacity > v_total then
+        raise exception 'Allocation of % seats exceeds the capacity % of center %',
+                        new.allocated_capacity, v_total, new.center_id;
+    end if;
+    return new;
+END;
+$$ LANGUAGE plpgsql;
 
--- 12.2 View: Examination scrutiny and application status metrics
-CREATE OR REPLACE VIEW public.view_examination_scrutiny_metrics AS
-SELECT 
-    e.examination_id,
-    e.examination_code,
-    e.examination_name,
-    e.conducting_authority,
-    COUNT(a.application_id) AS total_applications,
-    COUNT(CASE WHEN a.application_status = 'accepted' THEN 1 END) AS accepted_count,
-    COUNT(CASE WHEN a.application_status = 'rejected' THEN 1 END) AS rejected_count,
-    COUNT(CASE WHEN a.application_status = 'under_review' THEN 1 END) AS under_review_count
-FROM public.examinations e
-LEFT JOIN public.applications a ON e.examination_id = a.examination_id
-GROUP BY e.examination_id, e.examination_code, e.examination_name, e.conducting_authority;
+CREATE TRIGGER trg_validate_capacity
+BEFORE INSERT OR UPDATE ON examination_centers
+FOR EACH ROW EXECUTE FUNCTION validate_center_capacity();
 
--- Query View 2
-SELECT * FROM public.view_examination_scrutiny_metrics
-ORDER BY total_applications DESC;
-
--- 12.3 View: Published official merit roster
-CREATE OR REPLACE VIEW public.view_published_merit_list AS
-SELECT 
-    e.examination_code,
-    e.examination_name,
-    c.candidate_number,
-    c.full_name AS candidate_name,
-    c.category,
-    r.marks_obtained,
-    r.maximum_marks,
-    ROUND((r.marks_obtained / r.maximum_marks) * 100, 2) AS percentage_score,
-    r.rank,
-    r.result_status,
-    r.published_at
-FROM public.results r
-INNER JOIN public.applications a ON r.application_id = a.application_id
-INNER JOIN public.candidates c ON a.candidate_id = c.candidate_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE r.published_at IS NOT NULL;
-
--- Query View 3
-SELECT * FROM public.view_published_merit_list
-ORDER BY examination_code, rank ASC;
-
--- 12.4 View: Examination center venue utilization and seat quota
-CREATE OR REPLACE VIEW public.view_exam_center_utilization AS
-SELECT 
-    ec.center_id,
-    ec.center_code,
-    ec.center_name,
-    ec.city,
-    ec.state,
-    ec.total_capacity,
-    COALESCE(SUM(jc.allocated_capacity), 0) AS total_allocated_seats,
-    (ec.total_capacity - COALESCE(SUM(jc.allocated_capacity), 0)) AS remaining_seats
-FROM public.exam_centers ec
-LEFT JOIN public.examination_centers jc ON ec.center_id = jc.center_id
-GROUP BY ec.center_id, ec.center_code, ec.center_name, ec.city, ec.state, ec.total_capacity;
-
--- Query View 4
-SELECT * FROM public.view_exam_center_utilization
-ORDER BY total_allocated_seats DESC;
-
-
--- ============================================================================
--- 13. RANKING USING RANK() AND WINDOW FUNCTIONS
--- Concepts: OVER (PARTITION BY ... ORDER BY ...), RANK(), DENSE_RANK(), and ROW_NUMBER().
--- ============================================================================
-
--- 13.1 Calculate examination-wise merit rank partitioned by examination
-SELECT 
-    e.examination_code,
-    c.candidate_number,
-    c.full_name AS candidate_name,
-    r.marks_obtained,
-    r.maximum_marks,
-    RANK() OVER (
-        PARTITION BY e.examination_id 
-        ORDER BY r.marks_obtained DESC
-    ) AS calculated_merit_rank,
-    DENSE_RANK() OVER (
-        PARTITION BY e.examination_id 
-        ORDER BY r.marks_obtained DESC
-    ) AS dense_merit_rank
-FROM public.examinations e
-INNER JOIN public.applications a ON e.examination_id = a.examination_id
-INNER JOIN public.candidates c ON a.candidate_id = c.candidate_id
-INNER JOIN public.results r ON a.application_id = r.application_id
-WHERE r.published_at IS NOT NULL
-ORDER BY e.examination_code, calculated_merit_rank ASC;
-
--- 13.2 Overall top 5 candidates across all published recruitment scorecards
-SELECT 
-    c.candidate_number,
-    c.full_name AS candidate_name,
-    e.examination_code,
-    e.examination_name,
-    r.marks_obtained,
-    r.maximum_marks,
-    ROUND((r.marks_obtained / r.maximum_marks) * 100, 2) AS percentage,
-    ROW_NUMBER() OVER (ORDER BY r.marks_obtained DESC) AS overall_position
-FROM public.results r
-INNER JOIN public.applications a ON r.application_id = a.application_id
-INNER JOIN public.candidates c ON a.candidate_id = c.candidate_id
-INNER JOIN public.examinations e ON a.examination_id = e.examination_id
-WHERE r.published_at IS NOT NULL
-ORDER BY r.marks_obtained DESC
-LIMIT 5;
-
-
--- ============================================================================
--- 14. ALTER TABLE AND CONSTRAINT DEMONSTRATIONS
--- Concepts: Schema alteration (ADD COLUMN, ADD CONSTRAINT), catalog inspection.
--- ============================================================================
-
--- 14.1 Demonstrate adding a secondary contact column to candidates
+-- Test 1: center X4 holds only 600 candidates, so 700 seats must be rejected.
 BEGIN;
-ALTER TABLE public.candidates
-ADD COLUMN IF NOT EXISTS alternate_phone VARCHAR(15);
+SET search_path TO grems_lab;
 
--- Verify column addition in information_schema
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'candidates' AND column_name = 'alternate_phone';
-ROLLBACK; -- Safe demonstration rollback
+insert into examination_centers values ('E4','X4',700);
 
--- 14.2 Demonstrate adding a CHECK constraint for maximum allowable fee
-BEGIN;
-ALTER TABLE public.examinations
-ADD CONSTRAINT chk_exam_max_fee CHECK (application_fee <= 5000.00);
+-- OUTPUT: ERROR:  Allocation of 700 seats exceeds the capacity 600 of center X4
 
--- Verify constraint creation
-SELECT constraint_name, constraint_type
-FROM information_schema.table_constraints
-WHERE table_name = 'examinations' AND constraint_name = 'chk_exam_max_fee';
 ROLLBACK;
+SET search_path TO grems_lab;
 
--- 14.3 Inspect table constraints across the recruitment schema
-SELECT 
-    tc.table_name, 
-    tc.constraint_name, 
-    tc.constraint_type, 
-    kcu.column_name
-FROM information_schema.table_constraints tc
-JOIN information_schema.key_column_usage kcu 
-  ON tc.constraint_name = kcu.constraint_name
-WHERE tc.table_schema = 'public'
-ORDER BY tc.table_name, tc.constraint_type DESC;
+-- Test 2: 500 seats are within the capacity, so the row is accepted.
+BEGIN;
+SET search_path TO grems_lab;
 
+insert into examination_centers values ('E4','X4',500);
+
+-- OUTPUT: INSERT 0 1
+
+select * from examination_centers where examination_id = 'E4' order by center_id;
+
+-- OUTPUT:
+--  examination_id | center_id | allocated_capacity
+-- ----------------+-----------+--------------------
+--  E4             | X3        | 400
+--  E4             | X4        | 500
+--  E4             | X5        | 150
+-- (3 rows)
+
+ROLLBACK;
+SET search_path TO grems_lab;
+
+-- ----------------------------------------------------------------------------
+-- 2. Create a trigger that automatically calculates the Percentage and the
+--    Result_status (PASS if Percentage >= 40, otherwise FAIL) when a result is entered.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION calculate_result() RETURNS TRIGGER AS $$
+BEGIN
+    new.percentage := round(new.marks_obtained * 100 / new.maximum_marks, 2);
+    if new.percentage >= 40 then
+        new.result_status := 'PASS';
+    else
+        new.result_status := 'FAIL';
+    end if;
+    return new;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_calculate_result
+BEFORE INSERT OR UPDATE OF marks_obtained, maximum_marks ON results
+FOR EACH ROW EXECUTE FUNCTION calculate_result();
+
+-- Only marks are entered. Percentage and Result_status are filled in by the trigger.
+BEGIN;
+SET search_path TO grems_lab;
+
+insert into results (result_id, application_id, marks_obtained, maximum_marks) values ('R7','A10',90,150);
+
+-- OUTPUT: INSERT 0 1
+
+select result_id, application_id, marks_obtained, maximum_marks, percentage, result_status from results where result_id = 'R7';
+
+-- OUTPUT:
+--  result_id | application_id | marks_obtained | maximum_marks | percentage | result_status
+-- -----------+----------------+----------------+---------------+------------+---------------
+--  R7        | A10            | 90.00          | 150.00        | 60.00      | PASS
+-- (1 row)
+
+ROLLBACK;
+SET search_path TO grems_lab;
+
+-- ----------------------------------------------------------------------------
+-- 3. Create a function that returns the number of seats still left at an exam center
+--    for an examination.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION seats_left(p_exam VARCHAR, p_center VARCHAR) RETURNS INT AS $$
+    select ec.allocated_capacity
+           - (select count(*) from applications a
+              where a.examination_id = ec.examination_id
+                and a.center_id = ec.center_id
+                and a.application_status <> 'REJECTED')
+    from examination_centers ec
+    where ec.examination_id = p_exam and ec.center_id = p_center;
+$$ LANGUAGE sql;
+
+select seats_left('E3','X1') as seats_left;
+
+-- OUTPUT:
+--  seats_left
+-- ------------
+--  198
+-- (1 row)
+
+select ec.examination_id, ec.center_id, ec.allocated_capacity,
+       seats_left(ec.examination_id, ec.center_id) as seats_left
+from examination_centers ec
+order by ec.examination_id, ec.center_id;
+
+-- OUTPUT:
+--  examination_id | center_id | allocated_capacity | seats_left
+-- ----------------+-----------+--------------------+------------
+--  E1             | X1        | 300                | 299
+--  E1             | X2        | 400                | 400
+--  E1             | X3        | 500                | 499
+--  E2             | X1        | 250                | 248
+--  E2             | X2        | 300                | 298
+--  E3             | X1        | 200                | 198
+--  E3             | X2        | 300                | 300
+--  E3             | X4        | 250                | 249
+--  E4             | X3        | 400                | 400
+--  E4             | X5        | 150                | 150
+-- (10 rows)
 
 -- ============================================================================
--- 15. POSTGRESQL RANGE PARTITIONING DEMONSTRATION
--- Concepts: Practical querying of the declarative range-partitioned table
---           (examination_archives_partitioned) created in create_tables.sql.
+-- EXPERIMENT 6 :  ADDITIONAL QUERIES (PATTERN MATCHING, SET DIFFERENCE, DIVISION AND DDL)
 -- ============================================================================
 
--- 15.1 Demonstrate partition pruning (optimizer accesses only target partition: exams_q2_2026)
-EXPLAIN SELECT * 
-FROM public.examination_archives_partitioned
-WHERE examination_date = DATE '2026-05-24';
+-- 6. Consider the GREMS schema given in Experiment 1 (tables already created above).
+--
+--    Write SQL queries to
+--    1. Find all examinations whose examination name contains the word "GRADUATE"
+--       (pattern matching using LIKE).
+--    2. Find the candidate details and marks of candidates who have scored strictly
+--       above the overall average marks across all examinations.
+--    3. Find the cities where exam centers are located but no registered candidate
+--       currently resides (set difference using EXCEPT).
+--    4. Find the candidates who have not applied for the examination "UPSC-CSP-2026"
+--       (anti-join using NOT EXISTS).
+--    5. Find the candidates who have applied for all examinations conducted by the
+--       conducting authority "UPSC" (relational division using NOT EXISTS).
+--    6. Demonstrate altering a table to add a new column to the CANDIDATES table and
+--       adding a CHECK constraint on the EXAMINATIONS table.
 
--- 15.2 Query partitioned records across quarterly boundaries
-SELECT 
-    examination_code,
-    examination_name,
-    conducting_authority,
-    examination_date,
-    total_vacancies
-FROM public.examination_archives_partitioned
-WHERE examination_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'
-ORDER BY examination_date ASC;
+-- ----------------------------------------------------------------------------
+-- SOLUTIONS:
+-- ----------------------------------------------------------------------------
+SET search_path TO grems_lab;
+
+
+-- ----------------------------------------------------------------------------
+-- 1. Find all examinations whose examination name contains the word "GRADUATE"
+--    (pattern matching using LIKE).
+-- ----------------------------------------------------------------------------
+select examination_code, examination_name, conducting_authority, total_vacancies
+from examinations
+where examination_name like '%GRADUATE%'
+order by examination_code;
+
+-- OUTPUT:
+--  examination_code | examination_name        | conducting_authority | total_vacancies
+-- ------------------+-------------------------+----------------------+-----------------
+--  SSC-CGL-2026     | COMBINED GRADUATE LEVEL | SSC                  | 1500
+-- (1 row)
+
+-- ----------------------------------------------------------------------------
+-- 2. Find the candidate details and marks of candidates who have scored strictly
+--    above the overall average marks across all examinations.
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, e.examination_code, r.marks_obtained
+from candidates c, applications a, examinations e, results r
+where c.candidate_id = a.candidate_id
+  and a.examination_id = e.examination_id
+  and a.application_id = r.application_id
+  and r.marks_obtained > (select avg(marks_obtained) from results)
+order by r.marks_obtained desc;
+
+-- OUTPUT:
+--  candidate_id | full_name    | examination_code | marks_obtained
+-- --------------+--------------+------------------+----------------
+--  C2           | PRIYA PATEL  | UPSC-CSP-2026    | 142.00
+--  C2           | PRIYA PATEL  | KPSC-FDA-2026    | 121.00
+--  C4           | ANITA DSOUZA | KPSC-FDA-2026    | 112.50
+-- (3 rows)
+
+-- ----------------------------------------------------------------------------
+-- 3. Find the cities where exam centers are located but no registered candidate
+--    currently resides (set difference using EXCEPT).
+-- ----------------------------------------------------------------------------
+select city from exam_centers
+except
+select city from candidates
+order by city;
+
+-- OUTPUT:
+--  city
+-- -------
+--  DELHI
+-- (1 row)
+
+-- ----------------------------------------------------------------------------
+-- 4. Find the candidates who have not applied for the examination "UPSC-CSP-2026"
+--    (anti-join using NOT EXISTS).
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name, c.city
+from candidates c
+where not exists (select * from applications a, examinations e
+                  where a.candidate_id = c.candidate_id
+                    and a.examination_id = e.examination_id
+                    and e.examination_code = 'UPSC-CSP-2026')
+order by c.candidate_id;
+
+-- OUTPUT:
+--  candidate_id | full_name    | city
+-- --------------+--------------+-----------
+--  C4           | ANITA DSOUZA | UDUPI
+--  C5           | SUMANTH RAO  | BENGALURU
+--  C6           | FATIMA KHAN  | HYDERABAD
+-- (3 rows)
+
+-- ----------------------------------------------------------------------------
+-- 5. Find the candidates who have applied for all examinations conducted by the
+--    conducting authority "UPSC" (relational division using NOT EXISTS).
+-- ----------------------------------------------------------------------------
+select c.candidate_id, c.full_name
+from candidates c
+where not exists (select * from examinations e
+                  where e.conducting_authority = 'UPSC'
+                    and not exists (select * from applications a
+                                    where a.candidate_id = c.candidate_id
+                                      and a.examination_id = e.examination_id))
+order by c.candidate_id;
+
+-- OUTPUT:
+--  candidate_id | full_name
+-- --------------+--------------
+--  C1           | RAHUL SHARMA
+--  C2           | PRIYA PATEL
+--  C3           | AMIT KUMAR
+-- (3 rows)
+
+-- ----------------------------------------------------------------------------
+-- 6. Demonstrate altering a table to add a new column to the CANDIDATES table and
+--    adding a CHECK constraint on the EXAMINATIONS table.
+--    (BEGIN ... ROLLBACK safely verifies the alterations without changing schema state.)
+-- ----------------------------------------------------------------------------
+BEGIN;
+SET search_path TO grems_lab;
+
+ALTER TABLE candidates ADD COLUMN alternate_phone VARCHAR(15);
+
+select column_name, data_type, is_nullable
+from information_schema.columns
+where table_schema = 'grems_lab'
+  and table_name = 'candidates'
+  and column_name = 'alternate_phone';
+
+-- OUTPUT:
+--  column_name     | data_type         | is_nullable
+-- -----------------+-------------------+-------------
+--  alternate_phone | character varying | YES
+-- (1 row)
+
+ALTER TABLE examinations ADD CONSTRAINT chk_exam_fee CHECK (application_fee <= 5000);
+
+select constraint_name, constraint_type
+from information_schema.table_constraints
+where table_schema = 'grems_lab'
+  and table_name = 'examinations'
+  and constraint_name = 'chk_exam_fee';
+
+-- OUTPUT:
+--  constraint_name | constraint_type
+-- -----------------+-----------------
+--  chk_exam_fee    | CHECK
+-- (1 row)
+
+ROLLBACK;
+SET search_path TO grems_lab;
+
+-- ============================================================================
+-- SCHEMA DIAGRAM
+-- (PK = primary key, FK = foreign key, UK = unique)
+-- ============================================================================
+
+-- CANDIDATES
+-- | Candidate_id (PK) | Candidate_number (UK) | Full_name | Date_of_birth | Gender | Phone_number | City | State | Category |
+--
+-- EDUCATIONAL_QUALIFICATIONS
+-- | Qualification_id (PK) | Candidate_id (FK) | Qualification_level | Institution_name | Passing_year | Percentage |
+--
+-- EXAMINATIONS
+-- | Examination_id (PK) | Examination_code (UK) | Examination_name | Conducting_authority | Application_start_date |
+-- | Application_end_date | Examination_date | Application_fee | Total_vacancies | Examination_status |
+--
+-- EXAM_CENTERS
+-- | Center_id (PK) | Center_code (UK) | Center_name | City | State | Total_capacity |
+--
+-- EXAMINATION_CENTERS
+-- | Examination_id (PK, FK) | Center_id (PK, FK) | Allocated_capacity |
+--
+-- APPLICATIONS
+-- | Application_id (PK) | Application_number (UK) | Candidate_id (FK) | Examination_id (FK) | Center_id (FK) |
+-- | Applied_at | Application_status | Payment_status |      (UK: Candidate_id + Examination_id)
+-- (Examination_id, Center_id) is a composite FK to EXAMINATION_CENTERS
+--
+-- ADMIT_CARDS
+-- | Admit_card_id (PK) | Application_id (FK, UK) | Roll_number (UK) | Issue_date | Reporting_time |
+--
+-- RESULTS
+-- | Result_id (PK) | Application_id (FK, UK) | Marks_obtained | Maximum_marks | Percentage | Rank | Result_status | Published_at |
+--
+-- Relationships
+--   CANDIDATES 1 ---- N EDUCATIONAL_QUALIFICATIONS
+--   CANDIDATES 1 ---- N APPLICATIONS  N ---- 1 EXAMINATIONS
+--   EXAMINATIONS N ---- M EXAM_CENTERS   (through EXAMINATION_CENTERS)
+--   APPLICATIONS 1 ---- 1 ADMIT_CARDS
+--   APPLICATIONS 1 ---- 1 RESULTS

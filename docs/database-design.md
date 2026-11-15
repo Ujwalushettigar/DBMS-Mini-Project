@@ -232,3 +232,17 @@ The PostgreSQL database enforces relational integrity and procedural rules via s
 | 6 | `trg_validate_center_allocation` | `public.examination_centers` | `BEFORE INSERT OR UPDATE` | `check_center_allocation_capacity()` | Prevents over-allocation: validates that the sum of seats allocated across all exams scheduled on the same date does not exceed the center's total physical capacity. |
 | 7 | `trg_validate_application_center_capacity` | `public.applications` | `BEFORE INSERT OR UPDATE` | `check_application_center_capacity()` | Enforces center quota limits: ensures candidate cannot be assigned to an exam center once the allocated capacity quota for that examination has been reached. |
 
+---
+
+## 6. Academic DBMS Laboratory Schema (`grems_lab`)
+
+For academic evaluation aligned with the college DBMS laboratory curriculum (**CS522L5C**), the practical queries file [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) operates on a simplified, self-contained copy of the tables inside an isolated schema called **`grems_lab`**.
+
+Key design differences between the academic lab schema and the production `public` schema:
+1. **Readable Academic Identifiers**: Uses short sequential IDs (`'C1'`, `'C2'`, `'E1'`, `'X1'`, `'A1'`, `'AC1'`, `'R1'`) rather than 128-bit UUIDs, closely matching the pedagogical conventions of college DBMS lab manuals (e.g., `'B1'`, `'C1'` in Bank/Company databases).
+2. **Decoupled from Supabase Auth**: Omits `auth.users` and `public.profiles` dependencies so that all tables, queries, views, triggers, and functions run in standard PostgreSQL 15+ (psql, pgAdmin, DBeaver) without requiring an active Supabase cloud auth connection.
+3. **Explicit `percentage` Column in `RESULTS`**: The lab `RESULTS` table declares `PERCENTAGE NUMERIC(5,2)` as a standard column to support manual calculation, trigger-based population, and UPDATE exercises demonstrated in Experiments 3 and 5. (In the production schema, `percentage` is computed on the fly or maintained as a stored generated column).
+4. **Declarative Partitioning**: Experiment 2 demonstrates PostgreSQL Declarative Range Partitioning using `EXAMINATION_ARCHIVE` with partitions `EXAM_P2026_H1`, `EXAM_P2026_H2`, and `EXAM_P2027`, demonstrating partition pruning via `EXPLAIN`.
+5. **Full Schema Isolation**: All objects exist strictly in `grems_lab`. Operational application data in `public` is never touched or modified.
+
+

@@ -35,7 +35,7 @@ database/
 │   └── insert_data.sql         # Complete demonstration dataset with prerequisite validation
 │
 ├── queries/
-│   └── queries.sql             # 15 clearly numbered practical DBMS lab experiments
+│   └── queries.sql             # 6 DBMS Lab experiments with 29 queries, problem statements and real outputs
 │
 └── README.md                   # Complete database architectural documentation and setup guide
 ```
@@ -174,7 +174,7 @@ This uses the Supabase Admin API (`service_role` key from `backend/.env`) to:
    - Once validated, it populates all nine tables idempotently with 2027 recruitment notices, centers, allocations, applications, admit cards, and published results.
 
 ### Step 4: Execute Laboratory Queries from `queries.sql`
-Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) and execute individual queries in the Supabase SQL Editor to test, demonstrate, and verify DBMS laboratory exercises.
+Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) and run the script in your SQL client or Supabase SQL Editor to test, demonstrate, and verify DBMS laboratory exercises.
 
 ---
 
@@ -193,22 +193,32 @@ Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20P
 
 ---
 
-## 9. Practical Queries Manual Organization (`queries.sql`)
+## 9. DBMS Laboratory Practical Queries Manual (`queries.sql`)
 
-[`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) contains **15 clearly numbered sections**:
+[`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) is organized strictly according to the college DBMS Laboratory Manual (**CS522L5C**). It follows the academic pedagogy: **Problem Statement ➔ Schema/Data Solutions ➔ Numbered Queries ➔ Real Output**.
 
-1. **Basic SELECT Queries and Filtering**: Projections, predicates, pattern searches with `ILIKE`.
-2. **UPDATE and DELETE Operations**: Predicate-scoped DML updates inside safe `BEGIN ... ROLLBACK` blocks.
-3. **Traditional Joins Using WHERE Conditions**: Comma-separated Cartesian products with join filters.
-4. **INNER JOIN, LEFT JOIN, and Multi-Table Joins**: ANSI SQL join operations linking up to 4 entities.
-5. **Nested Queries and Subqueries**: Scalar, multi-row, and correlated subqueries.
-6. **Aggregate Functions**: Columnar aggregations with `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`.
-7. **GROUP BY and HAVING**: Grouping calculations and post-aggregation condition filtering.
-8. **Date Operations and BETWEEN**: PostgreSQL `DATE` literals, intervals, and quarterly filtering.
-9. **UNION, UNION ALL, and EXCEPT**: Relational set operations (with `EXCEPT` replacing Oracle `MINUS`).
-10. **EXISTS and NOT EXISTS**: Semi-joins, anti-joins, and universal quantification (relational division).
-11. **Highest and Second-Highest Marks**: Nested subquery formulations without relying on `LIMIT`.
-12. **Views and View-Based Queries**: 4 reusable database views (`view_candidate_application_summary`, `view_examination_scrutiny_metrics`, `view_published_merit_list`, `view_exam_center_utilization`).
-13. **Ranking using RANK() and Window Functions**: `RANK()`, `DENSE_RANK()`, and `ROW_NUMBER()` partitioned by examination.
-14. **ALTER TABLE and Constraint Demonstrations**: Demonstrating `ADD COLUMN`, `ADD CONSTRAINT`, and `information_schema` catalog queries.
-15. **PostgreSQL Range Partitioning Demonstration**: Practical queries demonstrating partition pruning on the demonstration table `examination_archives_partitioned`.
+The manual contains **5 lab experiments with 23 queries (plus Experiment 6 with 6 additional queries)**, totaling **29 queries**:
+
+1. **Experiment 1**: Candidates, examinations, centers and applications (traditional joins, max/min, union, delete with cascade) — 5 queries
+2. **Experiment 2**: Examination details, delete with cascade, partition and view — 5 queries
+3. **Experiment 3**: Candidate details, view, update and categorisation of results (CASE) — 5 queries
+4. **Experiment 4**: Nested queries, NOT EXISTS, NOT IN, GROUP BY ... HAVING — 5 queries
+5. **Experiment 5**: Triggers and functions (capacity validation, auto-result evaluation, seats_left function) — 3 programs
+6. **Experiment 6**: Additional queries (pattern matching with `LIKE`, scalar `AVG` subquery, set difference with `EXCEPT`, anti-join with `NOT EXISTS`, relational division, and DDL constraints) — 6 queries
+
+### How to Run the Lab Queries
+
+- **psql CLI (Recommended)**:
+  ```bash
+  psql -X -f database/queries/queries.sql
+  ```
+  Runs the entire file from start to finish. You will see exactly one intentional error line during Experiment 5 (`ERROR: Allocation of 700 seats exceeds the capacity 600 of center X4`), which proves the capacity trigger works.
+- **pgAdmin / DBeaver**:
+  Open `database/queries/queries.sql` in the Query Tool and execute the complete script.
+- **Supabase SQL Editor**:
+  Supabase displays only the result of the *last* statement in a multi-query batch. To inspect each query in Supabase, execute queries individually or in sections, making sure to prepend:
+  ```sql
+  SET search_path TO grems_lab;
+  ```
+- **Schema Isolation Guarantee**:
+  All tables, views, functions, triggers, and partitioned tables in `queries.sql` are created in an isolated schema called **`grems_lab`**. The operational application tables in `public` schema are never touched. The script is fully idempotent: it drops and recreates `grems_lab` at the top of each run.
