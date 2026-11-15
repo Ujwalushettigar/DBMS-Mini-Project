@@ -12,6 +12,13 @@ const mockDatabase = {
   profiles: [
     {
       id: 'a1000000-0000-0000-0000-000000000001',
+      email: 'admin@gov.in',
+      role: 'admin',
+      created_at: '2026-01-01T09:00:00Z',
+      updated_at: '2026-01-01T09:00:00Z'
+    },
+    {
+      id: 'a1000000-0000-0000-0000-000000000002',
       email: 'admin.recruitment@gov.in',
       role: 'admin',
       created_at: '2026-01-01T09:00:00Z',
@@ -19,7 +26,7 @@ const mockDatabase = {
     },
     {
       id: 'c1000000-0000-0000-0000-000000000001',
-      email: 'rohan.sharma@example.com',
+      email: 'rahul.sharma@example.com',
       role: 'candidate',
       created_at: '2026-01-05T10:00:00Z',
       updated_at: '2026-01-05T10:00:00Z'
@@ -33,7 +40,7 @@ const mockDatabase = {
     },
     {
       id: 'c1000000-0000-0000-0000-000000000003',
-      email: 'amit.verma@example.com',
+      email: 'amit.kumar@example.com',
       role: 'candidate',
       created_at: '2026-01-07T14:15:00Z',
       updated_at: '2026-01-07T14:15:00Z'
@@ -43,8 +50,8 @@ const mockDatabase = {
     {
       candidate_id: 'd1000000-0000-0000-0000-000000000001',
       user_id: 'c1000000-0000-0000-0000-000000000001',
-      candidate_number: 'CND-2026-1001',
-      full_name: 'Rohan Sharma',
+      candidate_number: 'CND-2027-00101',
+      full_name: 'Rahul Sharma',
       date_of_birth: '1998-04-12',
       gender: 'Male',
       phone_number: '9811223344',
@@ -59,7 +66,7 @@ const mockDatabase = {
     {
       candidate_id: 'd1000000-0000-0000-0000-000000000002',
       user_id: 'c1000000-0000-0000-0000-000000000002',
-      candidate_number: 'CND-2026-1002',
+      candidate_number: 'CND-2027-00102',
       full_name: 'Priya Patel',
       date_of_birth: '1999-07-25',
       gender: 'Female',
@@ -75,8 +82,8 @@ const mockDatabase = {
     {
       candidate_id: 'd1000000-0000-0000-0000-000000000003',
       user_id: 'c1000000-0000-0000-0000-000000000003',
-      candidate_number: 'CND-2026-1003',
-      full_name: 'Amit Verma',
+      candidate_number: 'CND-2027-00103',
+      full_name: 'Amit Kumar',
       date_of_birth: '1997-11-19',
       gender: 'Male',
       phone_number: '9833445566',
@@ -96,82 +103,132 @@ const mockDatabase = {
       qualification_level: 'SSLC',
       institution_name: 'Delhi Public School, RK Puram',
       board_or_university: 'CBSE',
-      passing_year: 2014,
+      passing_year: 2015,
       percentage: 91.50,
       created_at: '2026-01-05T10:10:00Z'
     },
     {
       qualification_id: 'q1000000-0000-0000-0000-000000000002',
       candidate_id: 'd1000000-0000-0000-0000-000000000001',
+      qualification_level: 'PUC',
+      institution_name: 'Delhi Public School, RK Puram',
+      board_or_university: 'CBSE',
+      passing_year: 2017,
+      percentage: 89.20,
+      created_at: '2026-01-05T10:11:00Z'
+    },
+    {
+      qualification_id: 'q1000000-0000-0000-0000-000000000003',
+      candidate_id: 'd1000000-0000-0000-0000-000000000001',
       qualification_level: 'Undergraduate',
       institution_name: 'Delhi Technological University',
       board_or_university: 'DTU',
-      passing_year: 2020,
+      passing_year: 2021,
       percentage: 84.20,
       created_at: '2026-01-05T10:12:00Z'
     },
     {
-      qualification_id: 'q1000000-0000-0000-0000-000000000003',
+      qualification_id: 'q1000000-0000-0000-0000-000000000004',
+      candidate_id: 'd1000000-0000-0000-0000-000000000002',
+      qualification_level: 'SSLC',
+      institution_name: 'National Public School, Indiranagar',
+      board_or_university: 'Karnataka State Board',
+      passing_year: 2015,
+      percentage: 93.40,
+      created_at: '2026-01-06T11:38:00Z'
+    },
+    {
+      qualification_id: 'q1000000-0000-0000-0000-000000000005',
+      candidate_id: 'd1000000-0000-0000-0000-000000000002',
+      qualification_level: 'PUC',
+      institution_name: 'MES Pre-University College',
+      board_or_university: 'Karnataka PUE Board',
+      passing_year: 2017,
+      percentage: 90.10,
+      created_at: '2026-01-06T11:39:00Z'
+    },
+    {
+      qualification_id: 'q1000000-0000-0000-0000-000000000006',
       candidate_id: 'd1000000-0000-0000-0000-000000000002',
       qualification_level: 'Undergraduate',
-      institution_name: 'Indian Statistical Institute',
-      board_or_university: 'ISI Kolkata',
+      institution_name: 'BMS College of Engineering',
+      board_or_university: 'VTU Belagavi',
       passing_year: 2021,
       percentage: 88.00,
       created_at: '2026-01-06T11:40:00Z'
+    },
+    {
+      qualification_id: 'q1000000-0000-0000-0000-000000000007',
+      candidate_id: 'd1000000-0000-0000-0000-000000000003',
+      qualification_level: 'SSLC',
+      institution_name: 'La Martiniere College, Lucknow',
+      board_or_university: 'ICSE',
+      passing_year: 2014,
+      percentage: 86.50,
+      created_at: '2026-01-07T14:22:00Z'
+    },
+    {
+      qualification_id: 'q1000000-0000-0000-0000-000000000008',
+      candidate_id: 'd1000000-0000-0000-0000-000000000003',
+      qualification_level: 'Undergraduate',
+      institution_name: 'University of Lucknow',
+      board_or_university: 'Lucknow University',
+      passing_year: 2020,
+      percentage: 81.25,
+      created_at: '2026-01-07T14:25:00Z'
     }
   ],
   examinations: [
     {
       examination_id: 'e1000000-0000-0000-0000-000000000001',
-      examination_code: 'SSC-CGL-2026',
-      examination_name: 'Combined Graduate Level Examination 2026',
+      examination_code: 'SSC-CGL-2027',
+      examination_name: 'Combined Graduate Level Examination 2027',
       conducting_authority: 'Staff Selection Commission',
       description: 'Nationwide recruitment for Group B and Group C non-technical posts across Ministries of India.',
       eligibility_criteria: 'Graduation from any recognized university. Age between 18 and 32 years.',
-      application_start_date: '2026-01-15',
-      application_end_date: '2026-04-15',
-      examination_date: '2026-06-20',
+      application_start_date: '2026-10-01',
+      application_end_date: '2027-06-30',
+      examination_date: '2027-09-15',
       application_fee: 100.00,
       total_vacancies: 8400,
       examination_status: 'published',
       created_by: 'a1000000-0000-0000-0000-000000000001',
-      created_at: '2026-01-10T09:00:00Z',
-      updated_at: '2026-01-10T09:00:00Z'
+      created_at: '2026-10-01T09:00:00Z',
+      updated_at: '2026-10-01T09:00:00Z'
     },
     {
       examination_id: 'e1000000-0000-0000-0000-000000000002',
-      examination_code: 'UPSC-CSE-2026',
-      examination_name: 'Civil Services (Preliminary) Examination 2026',
+      examination_code: 'UPSC-CSE-2027',
+      examination_name: 'Civil Services (Preliminary) Examination 2027',
       conducting_authority: 'Union Public Service Commission',
       description: 'Premier national competitive examination for IAS, IPS, and IFS cadres.',
       eligibility_criteria: 'Bachelors Degree in any discipline. Age limit 21 to 32 years.',
-      application_start_date: '2026-02-01',
-      application_end_date: '2026-03-31',
-      examination_date: '2026-05-24',
+      application_start_date: '2026-11-01',
+      application_end_date: '2027-07-31',
+      examination_date: '2027-10-20',
       application_fee: 100.00,
       total_vacancies: 1056,
       examination_status: 'published',
       created_by: 'a1000000-0000-0000-0000-000000000001',
-      created_at: '2026-01-12T10:00:00Z',
-      updated_at: '2026-01-12T10:00:00Z'
+      created_at: '2026-11-01T10:00:00Z',
+      updated_at: '2026-11-01T10:00:00Z'
     },
     {
       examination_id: 'e1000000-0000-0000-0000-000000000003',
-      examination_code: 'RRB-NTPC-2026',
-      examination_name: 'Non-Technical Popular Categories (NTPC)',
+      examination_code: 'RRB-NTPC-2027',
+      examination_name: 'Non-Technical Popular Categories (NTPC) 2027',
       conducting_authority: 'Railway Recruitment Control Board',
       description: 'Recruitment of Station Master, Commercial Clerk, and Goods Guard across 21 railway divisions.',
       eligibility_criteria: '12th Standard or Bachelor Degree depending on category.',
-      application_start_date: '2026-01-10',
-      application_end_date: '2026-03-20',
-      examination_date: '2026-05-15',
+      application_start_date: '2026-08-01',
+      application_end_date: '2027-05-30',
+      examination_date: '2027-08-10',
       application_fee: 250.00,
       total_vacancies: 11558,
       examination_status: 'completed',
       created_by: 'a1000000-0000-0000-0000-000000000001',
-      created_at: '2026-01-05T08:30:00Z',
-      updated_at: '2026-01-05T08:30:00Z'
+      created_at: '2026-08-01T08:30:00Z',
+      updated_at: '2026-08-01T08:30:00Z'
     }
   ],
   exam_centers: [
@@ -210,107 +267,188 @@ const mockDatabase = {
       contact_number: '0522-2612345',
       total_capacity: 450,
       created_at: '2026-01-02T11:00:00Z'
+    },
+    {
+      center_id: 'f1000000-0000-0000-0000-000000000004',
+      center_code: 'MUM-GEC-401',
+      center_name: 'Government Polytechnic Bandra',
+      address: '49 Kherwadi, Ali Yavar Jung Marg, Bandra East, Mumbai',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400051',
+      contact_number: '022-26474580',
+      total_capacity: 550,
+      created_at: '2026-01-02T11:30:00Z'
     }
   ],
   examination_centers: [
     {
       examination_id: 'e1000000-0000-0000-0000-000000000001',
       center_id: 'f1000000-0000-0000-0000-000000000001',
-      allocated_capacity: 400,
-      created_at: '2026-01-10T10:00:00Z'
+      allocated_capacity: 300,
+      created_at: '2026-10-02T10:00:00Z'
     },
     {
       examination_id: 'e1000000-0000-0000-0000-000000000001',
       center_id: 'f1000000-0000-0000-0000-000000000002',
-      allocated_capacity: 350,
-      created_at: '2026-01-10T10:00:00Z'
+      allocated_capacity: 250,
+      created_at: '2026-10-02T10:00:00Z'
+    },
+    {
+      examination_id: 'e1000000-0000-0000-0000-000000000001',
+      center_id: 'f1000000-0000-0000-0000-000000000004',
+      allocated_capacity: 250,
+      created_at: '2026-10-02T10:00:00Z'
     },
     {
       examination_id: 'e1000000-0000-0000-0000-000000000002',
       center_id: 'f1000000-0000-0000-0000-000000000001',
-      allocated_capacity: 500,
-      created_at: '2026-01-12T10:30:00Z'
+      allocated_capacity: 250,
+      created_at: '2026-11-02T10:30:00Z'
+    },
+    {
+      examination_id: 'e1000000-0000-0000-0000-000000000002',
+      center_id: 'f1000000-0000-0000-0000-000000000002',
+      allocated_capacity: 200,
+      created_at: '2026-11-02T10:30:00Z'
+    },
+    {
+      examination_id: 'e1000000-0000-0000-0000-000000000002',
+      center_id: 'f1000000-0000-0000-0000-000000000003',
+      allocated_capacity: 200,
+      created_at: '2026-11-02T10:30:00Z'
     },
     {
       examination_id: 'e1000000-0000-0000-0000-000000000003',
       center_id: 'f1000000-0000-0000-0000-000000000003',
-      allocated_capacity: 450,
-      created_at: '2026-01-05T09:00:00Z'
+      allocated_capacity: 350,
+      created_at: '2026-08-02T09:00:00Z'
     }
   ],
   applications: [
     {
       application_id: 'b1000000-0000-0000-0000-000000000001',
-      application_number: 'APP-2026-0001',
+      application_number: 'APP-2027-0001',
       candidate_id: 'd1000000-0000-0000-0000-000000000001',
       examination_id: 'e1000000-0000-0000-0000-000000000001',
       center_id: 'f1000000-0000-0000-0000-000000000001',
-      applied_at: '2026-01-20T10:15:00Z',
+      applied_at: '2026-10-15T10:15:00Z',
       application_status: 'accepted',
       payment_status: 'paid',
       remarks: 'Application documents and identity verified.',
-      updated_at: '2026-01-22T14:00:00Z'
+      updated_at: '2026-10-16T14:00:00Z'
     },
     {
       application_id: 'b1000000-0000-0000-0000-000000000002',
-      application_number: 'APP-2026-0002',
+      application_number: 'APP-2027-0002',
       candidate_id: 'd1000000-0000-0000-0000-000000000002',
       examination_id: 'e1000000-0000-0000-0000-000000000001',
       center_id: 'f1000000-0000-0000-0000-000000000002',
-      applied_at: '2026-01-22T11:20:00Z',
+      applied_at: '2026-10-18T11:20:00Z',
       application_status: 'accepted',
       payment_status: 'paid',
       remarks: 'Eligibility confirmed.',
-      updated_at: '2026-01-23T16:00:00Z'
+      updated_at: '2026-10-19T16:00:00Z'
     },
     {
       application_id: 'b1000000-0000-0000-0000-000000000003',
-      application_number: 'APP-2026-0003',
+      application_number: 'APP-2027-0003',
       candidate_id: 'd1000000-0000-0000-0000-000000000003',
       examination_id: 'e1000000-0000-0000-0000-000000000003',
       center_id: 'f1000000-0000-0000-0000-000000000003',
-      applied_at: '2026-01-25T14:00:00Z',
+      applied_at: '2026-08-20T14:00:00Z',
       application_status: 'accepted',
       payment_status: 'paid',
       remarks: 'Approved for RRB examination.',
-      updated_at: '2026-01-26T10:00:00Z'
+      updated_at: '2026-08-21T10:00:00Z'
+    },
+    {
+      application_id: 'b1000000-0000-0000-0000-000000000004',
+      application_number: 'APP-2027-0004',
+      candidate_id: 'd1000000-0000-0000-0000-000000000001',
+      examination_id: 'e1000000-0000-0000-0000-000000000002',
+      center_id: 'f1000000-0000-0000-0000-000000000001',
+      applied_at: '2026-11-05T09:30:00Z',
+      application_status: 'submitted',
+      payment_status: 'paid',
+      remarks: 'Application under administrative scrutiny.',
+      updated_at: '2026-11-05T09:30:00Z'
     }
   ],
   admit_cards: [
     {
       admit_card_id: 'ac000000-0000-0000-0000-000000000001',
       application_id: 'b1000000-0000-0000-0000-000000000001',
-      admit_card_number: 'AC-2026-0001',
-      roll_number: 'ROLL-SSCCGL-10001',
-      issue_date: '2026-05-15',
+      admit_card_number: 'AC-2027-0001',
+      roll_number: 'ROLL-SSCCGL-27001',
+      issue_date: '2027-08-25',
       reporting_time: '08:30:00',
       examination_instructions: '1. Bring original Government Photo ID.\n2. Carry printed Admit Card.\n3. Electronic items are strictly prohibited.',
       admit_card_file_url: null,
-      created_at: '2026-05-15T09:00:00Z'
+      created_at: '2027-08-25T09:00:00Z'
     },
     {
       admit_card_id: 'ac000000-0000-0000-0000-000000000002',
       application_id: 'b1000000-0000-0000-0000-000000000002',
-      admit_card_number: 'AC-2026-0002',
-      roll_number: 'ROLL-SSCCGL-10002',
-      issue_date: '2026-05-15',
+      admit_card_number: 'AC-2027-0002',
+      roll_number: 'ROLL-SSCCGL-27002',
+      issue_date: '2027-08-25',
       reporting_time: '08:30:00',
       examination_instructions: '1. Bring original Government Photo ID.\n2. Carry printed Admit Card.',
       admit_card_file_url: null,
-      created_at: '2026-05-15T09:00:00Z'
+      created_at: '2027-08-25T09:00:00Z'
+    },
+    {
+      admit_card_id: 'ac000000-0000-0000-0000-000000000003',
+      application_id: 'b1000000-0000-0000-0000-000000000003',
+      admit_card_number: 'AC-2027-0003',
+      roll_number: 'ROLL-RRBNTPC-27001',
+      issue_date: '2027-07-20',
+      reporting_time: '08:30:00',
+      examination_instructions: '1. Bring original Photo ID card.\n2. Arrive 45 minutes before exam schedule.',
+      admit_card_file_url: null,
+      created_at: '2027-07-20T09:00:00Z'
     }
   ],
   results: [
     {
       result_id: 'r1000000-0000-0000-0000-000000000001',
-      application_id: 'b1000000-0000-0000-0000-000000000003',
-      marks_obtained: 88.50,
+      application_id: 'b1000000-0000-0000-0000-000000000001',
+      marks_obtained: 86.50,
       maximum_marks: 100.00,
+      percentage: 86.50,
+      rank: 1,
+      result_status: 'pass',
+      is_published: true,
+      published_at: '2027-09-25T10:00:00Z',
+      remarks: 'Qualified for document verification round.',
+      created_at: '2027-09-25T09:30:00Z'
+    },
+    {
+      result_id: 'r1000000-0000-0000-0000-000000000002',
+      application_id: 'b1000000-0000-0000-0000-000000000002',
+      marks_obtained: 78.00,
+      maximum_marks: 100.00,
+      percentage: 78.00,
       rank: 2,
       result_status: 'pass',
-      published_at: '2026-06-01T10:00:00Z',
+      is_published: true,
+      published_at: '2027-09-25T10:00:00Z',
+      remarks: 'Qualified for document verification round.',
+      created_at: '2027-09-25T09:30:00Z'
+    },
+    {
+      result_id: 'r1000000-0000-0000-0000-000000000003',
+      application_id: 'b1000000-0000-0000-0000-000000000003',
+      marks_obtained: 92.50,
+      maximum_marks: 100.00,
+      percentage: 92.50,
+      rank: 1,
+      result_status: 'pass',
+      is_published: true,
+      published_at: '2027-08-20T10:00:00Z',
       remarks: 'Selected in top merit list for Station Master.',
-      created_at: '2026-06-01T09:30:00Z'
+      created_at: '2027-08-20T09:30:00Z'
     }
   ]
 };
@@ -388,12 +526,16 @@ const enrichResult = (res) => {
   if (!res) return null;
   const app = db.applications.find(a => a.application_id === res.application_id);
   const enrichedApp = app ? enrichApplication(app) : null;
-  const percentage = Number(((Number(res.marks_obtained) / Number(res.maximum_marks)) * 100).toFixed(2));
+  const percentage = res.percentage !== undefined ? Number(res.percentage) : Number(((Number(res.marks_obtained) / Number(res.maximum_marks)) * 100).toFixed(2));
+  const is_published = res.is_published !== undefined ? Boolean(res.is_published) : Boolean(res.published_at);
 
   return {
     ...res,
+    is_published,
     percentage,
     application: enrichedApp,
+    candidate: enrichedApp?.candidate || null,
+    examination: enrichedApp?.examination || null,
     candidate_name: enrichedApp?.candidate?.full_name,
     candidate_number: enrichedApp?.candidate?.candidate_number,
     category: enrichedApp?.candidate?.category,
@@ -412,7 +554,18 @@ const supabaseService = {
       if (error) throw error;
       return data;
     }
-    return db.profiles.find(p => p.email.toLowerCase() === email.toLowerCase()) || null;
+    const cleanEmail = email.toLowerCase().trim();
+    let profile = db.profiles.find(p => p.email.toLowerCase() === cleanEmail);
+    if (!profile) {
+      if (cleanEmail === 'admin@gov.in' || cleanEmail === 'admin.recruitment@gov.in') {
+        profile = db.profiles.find(p => p.role === 'admin');
+      } else if (cleanEmail === 'rahul.sharma@example.com' || cleanEmail === 'rohan.sharma@example.com' || cleanEmail === 'rahul.demo@example.com') {
+        profile = db.profiles.find(p => p.id === 'c1000000-0000-0000-0000-000000000001');
+      } else if (cleanEmail === 'amit.kumar@example.com' || cleanEmail === 'amit.verma@example.com' || cleanEmail === 'arjun.demo@example.com') {
+        profile = db.profiles.find(p => p.id === 'c1000000-0000-0000-0000-000000000003');
+      }
+    }
+    return profile || null;
   },
 
   findProfileById: async (id) => {
@@ -824,10 +977,31 @@ const supabaseService = {
       err.status = 404;
       throw err;
     }
-    if (Number(allocated_capacity) > center.total_capacity) {
-      const err = new Error(`Allocated capacity (${allocated_capacity}) exceeds center total capacity (${center.total_capacity}).`);
+    const allocCap = Number(allocated_capacity);
+    if (isNaN(allocCap) || allocCap <= 0) {
+      const err = new Error('Allocated capacity must be a positive integer.');
       err.status = 400;
       throw err;
+    }
+    if (allocCap > center.total_capacity) {
+      const err = new Error(`Allocated capacity (${allocCap}) exceeds center total physical capacity (${center.total_capacity}).`);
+      err.status = 400;
+      throw err;
+    }
+
+    const exam = db.examinations.find(e => e.examination_id === examination_id);
+    if (exam) {
+      const sameDateExams = db.examinations
+        .filter(e => e.examination_date === exam.examination_date && e.examination_id !== examination_id)
+        .map(e => e.examination_id);
+      const existingAllocOnDate = db.examination_centers
+        .filter(ec => ec.center_id === center_id && sameDateExams.includes(ec.examination_id))
+        .reduce((sum, ec) => sum + Number(ec.allocated_capacity), 0);
+      if (existingAllocOnDate + allocCap > center.total_capacity) {
+        const err = new Error(`Total allocated seats on ${exam.examination_date} (${existingAllocOnDate + allocCap}) exceeds center physical capacity (${center.total_capacity}).`);
+        err.status = 400;
+        throw err;
+      }
     }
 
     if (isSupabaseConfigured()) {
@@ -836,7 +1010,7 @@ const supabaseService = {
         .upsert({
           examination_id,
           center_id,
-          allocated_capacity: Number(allocated_capacity)
+          allocated_capacity: allocCap
         })
         .select()
         .single();
@@ -848,13 +1022,13 @@ const supabaseService = {
       ec => ec.examination_id === examination_id && ec.center_id === center_id
     );
     if (existingIdx !== -1) {
-      db.examination_centers[existingIdx].allocated_capacity = Number(allocated_capacity);
+      db.examination_centers[existingIdx].allocated_capacity = allocCap;
       return db.examination_centers[existingIdx];
     } else {
       const newLink = {
         examination_id,
         center_id,
-        allocated_capacity: Number(allocated_capacity),
+        allocated_capacity: allocCap,
         created_at: new Date().toISOString()
       };
       db.examination_centers.push(newLink);
@@ -946,6 +1120,24 @@ const supabaseService = {
       throw err;
     }
 
+    // 3. Verify allocated center capacity if center is selected
+    if (center_id) {
+      const ec = db.examination_centers.find(e => e.examination_id === examination_id && e.center_id === center_id);
+      if (!ec) {
+        const err = new Error('Selected exam center is not allocated for this examination.');
+        err.status = 400;
+        throw err;
+      }
+      const assignedCount = db.applications.filter(
+        a => a.examination_id === examination_id && a.center_id === center_id && !['rejected', 'withdrawn'].includes(a.application_status)
+      ).length;
+      if (assignedCount >= ec.allocated_capacity) {
+        const err = new Error(`Allocated center capacity (${ec.allocated_capacity}) reached for this venue. Cannot assign more candidates.`);
+        err.status = 400;
+        throw err;
+      }
+    }
+
     const application_number = generateApplicationNumber();
     const application_id = `b1000000-0000-0000-0000-${String(db.applications.length + 1).padStart(12, '0')}`;
 
@@ -982,7 +1174,36 @@ const supabaseService = {
     return enrichApplication(newApp);
   },
 
-  updateApplicationStatus: async (id, { application_status, center_id, remarks }) => {
+  updateApplicationStatus: async (id, { application_status, center_id, remarks }, userRole = null) => {
+    if (userRole === 'candidate') {
+      if (application_status && !['submitted', 'withdrawn'].includes(application_status)) {
+        const err = new Error('Access denied. Candidates cannot self-approve or modify application status to accepted/under_review.');
+        err.status = 403;
+        throw err;
+      }
+    }
+
+    if (center_id) {
+      const currentApp = db.applications.find(a => a.application_id === id);
+      const examId = currentApp ? currentApp.examination_id : null;
+      if (examId) {
+        const ec = db.examination_centers.find(e => e.examination_id === examId && e.center_id === center_id);
+        if (!ec) {
+          const err = new Error('Selected center is not designated or allocated for this examination.');
+          err.status = 400;
+          throw err;
+        }
+        const assignedCount = db.applications.filter(
+          a => a.examination_id === examId && a.center_id === center_id && a.application_id !== id && !['rejected', 'withdrawn'].includes(a.application_status)
+        ).length;
+        if (assignedCount >= ec.allocated_capacity) {
+          const err = new Error(`Allocated capacity of ${ec.allocated_capacity} reached for this exam center. Cannot assign more candidates.`);
+          err.status = 400;
+          throw err;
+        }
+      }
+    }
+
     if (isSupabaseConfigured()) {
       const updatePayload = { updated_at: new Date().toISOString() };
       if (application_status) updatePayload.application_status = application_status;
@@ -1134,12 +1355,23 @@ const supabaseService = {
   },
 
   getResultsByCandidateId: async (candidateId) => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('results')
+        .select('*, applications!inner(*, candidates(*), examinations(*))')
+        .eq('applications.candidate_id', candidateId)
+        .or('is_published.eq.true,published_at.not.is.null')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+
     const candidateAppIds = db.applications
       .filter(a => a.candidate_id === candidateId)
       .map(a => a.application_id);
 
     return db.results
-      .filter(r => candidateAppIds.includes(r.application_id) && r.published_at !== null)
+      .filter(r => candidateAppIds.includes(r.application_id) && (r.is_published === true || r.published_at !== null))
       .map(r => enrichResult(r));
   },
 
@@ -1204,6 +1436,7 @@ const supabaseService = {
         maximum_marks: maxMarks,
         rank: rank ? Number(rank) : null,
         result_status,
+        is_published: false,
         published_at: null,
         remarks: remarks || 'Evaluated scorecard.',
         created_at: new Date().toISOString()
@@ -1217,7 +1450,7 @@ const supabaseService = {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
         .from('results')
-        .update({ published_at: new Date().toISOString() })
+        .update({ is_published: true, published_at: new Date().toISOString() })
         .eq('result_id', resultId)
         .select('*, applications(*, candidates(*), examinations(*))')
         .single();
@@ -1226,6 +1459,7 @@ const supabaseService = {
     }
     const idx = db.results.findIndex(r => r.result_id === resultId);
     if (idx === -1) return null;
+    db.results[idx].is_published = true;
     db.results[idx].published_at = new Date().toISOString();
     return enrichResult(db.results[idx]);
   },

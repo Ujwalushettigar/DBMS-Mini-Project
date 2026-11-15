@@ -3,13 +3,56 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-surface font-sans text-slate-800 antialiased; }
+  h1, h2, h3, h4 { @apply text-gov-800; }
+  :focus-visible { outline: 3px solid #e8730c; outline-offset: 2px; }
+  html.high-contrast body { filter: contrast(1.35) saturate(0.85); }
 }
 
-/* Print styling for Admit Cards & Scorecards */
+@layer components {
+  .gov-card { @apply rounded border border-line bg-white shadow-card; }
+  .gov-card-header { @apply flex items-center gap-2 border-b border-line bg-gov-50 px-4 py-3 font-semibold text-gov-800; }
+  .gov-link { @apply text-gov-600 underline-offset-2 hover:underline; }
+
+  .gov-btn { @apply inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60; }
+  .gov-btn-primary { @apply bg-gov-700 text-white hover:bg-gov-800; }
+  .gov-btn-accent { @apply bg-saffron-500 text-white hover:bg-saffron-600; }
+  .gov-btn-outline { @apply border border-gov-700 bg-white text-gov-700 hover:bg-gov-50; }
+  .gov-btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+
+  .gov-label { @apply mb-1 block text-sm font-semibold text-slate-700; }
+  .gov-label.required::after { content: ' *'; @apply text-red-600; }
+  .gov-input { @apply w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-gov-600 focus:outline-none focus:ring-2 focus:ring-gov-200; }
+  .gov-input[aria-invalid='true'] { @apply border-red-500; }
+
+  .gov-section-title { @apply mb-3 border-l-4 border-saffron-500 pl-3 text-lg font-bold text-gov-800; }
+
+  .gov-table-wrap { @apply overflow-x-auto rounded border border-line bg-white; }
+  .gov-table { @apply w-full border-collapse text-sm; }
+  .gov-table th { @apply border border-gov-800 bg-gov-700 px-3 py-2 text-left font-semibold text-white; }
+  .gov-table td { @apply border border-line px-3 py-2 align-top; }
+  .gov-table tbody tr:nth-child(even) { @apply bg-slate-50; }
+  .gov-table tbody tr:hover { @apply bg-gov-50; }
+}
+
+/* What's New ticker */
+.marquee { overflow: hidden; }
+.marquee-track {
+  display: inline-flex; gap: 3rem; padding-left: 100%; white-space: nowrap;
+  animation: gov-marquee 40s linear infinite;
+}
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes gov-marquee { to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; }
+  .marquee-track { animation: none; padding-left: 0; }
+}
+
+/* Hide site chrome when printing */
 @media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
   body * {
     visibility: hidden;
   }
@@ -24,9 +67,6 @@
     margin: 0;
     padding: 1rem;
     background: white;
-  }
-  .no-print {
-    display: none !important;
   }
 }
 

@@ -143,46 +143,38 @@ Row Level Security is enabled across **all 9 public tables**. Access rules are e
 
 ## 7. Supabase Setup & Execution Order
 
-Follow this exact sequential order when deploying the project on Supabase:
+Follow this exact sequential 4-step order when deploying the project on Supabase:
 
-### Step 1: Ensure Supabase Auth is Configured
-Ensure Email Provider is enabled in your Supabase Dashboard under **Authentication** -> **Providers**.
-
-### Step 2: Execute `create_tables.sql` in Supabase SQL Editor
-1. Open the **SQL Editor** in your Supabase Dashboard.
+### Step 1: Execute `create_tables.sql` in Supabase SQL Editor
+1. Open the **SQL Editor** in your [Supabase Dashboard](https://supabase.com/dashboard).
 2. Copy the entire contents of [`database/schema/create_tables.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/schema/create_tables.sql).
-3. Click **Run**. This initializes all 9 tables, indexes, triggers, and Row Level Security policies.
+3. Click **Run**. This initializes all 9 relational tables, declarative partition tables, indexes, triggers (including automatic profiles, timestamps, and capacity validation), and Row Level Security policies.
 
-### Step 3: Register the Four Demonstration Accounts via Supabase Auth
-Before running the sample data script, the following 4 demo accounts must be registered through your application's signup page (`/register`) or directly via Supabase Auth:
+### Step 2: Seed the Demonstration Accounts
+Run the automated user seeder from your project backend:
 
-| Account Type | Email | Default Initial Role |
-|:---|:---|:---|
-| **Administrator** | `admin.demo@example.com` | `candidate` (promoted in Step 4) |
-| **Candidate 1** | `rahul.demo@example.com` | `candidate` |
-| **Candidate 2** | `priya.demo@example.com` | `candidate` |
-| **Candidate 3** | `arjun.demo@example.com` | `candidate` |
-
-The `on_auth_user_created` trigger will automatically populate their entries in `public.profiles`.
-
-### Step 4: Promote the Administrator Account
-In the Supabase SQL Editor, manually promote the admin account using:
-
-```sql
-UPDATE public.profiles
-SET role = 'admin'
-WHERE email = 'admin.demo@example.com';
+```bash
+cd backend
+npm run seed:users
 ```
 
-### Step 5: Execute `insert_data.sql`
+This uses the Supabase Admin API (`service_role` key from `backend/.env`) to:
+- Create `admin@gov.in` (Password: `Admin@123`, confirmed, promoted to `admin` in `public.profiles`).
+- Create `rahul.sharma@example.com` (Password: `Candidate@123`, confirmed).
+- Create `priya.patel@example.com` (Password: `Candidate@123`, confirmed).
+- Create `amit.kumar@example.com` (Password: `Candidate@123`, confirmed).
+
+*(Alternatively, you can register these accounts manually via your app's `/register` page and run `UPDATE public.profiles SET role = 'admin' WHERE email = 'admin@gov.in';` in the Supabase SQL Editor).*
+
+### Step 3: Execute `insert_data.sql` in Supabase SQL Editor
 1. Open [`database/sample_data/insert_data.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/sample_data/insert_data.sql).
 2. Copy the entire file and paste it into the Supabase SQL Editor.
 3. Click **Run**.
-   - The script first executes a **Validation Block** verifying that all four demo accounts exist in `public.profiles`. If any are missing, it halts with a clear error listing the missing accounts.
-   - Once validated, it populates all nine tables within a safe transaction.
+   - The script first executes a validation block verifying that all 4 demo accounts exist in `public.profiles`.
+   - Once validated, it populates all nine tables idempotently with 2027 recruitment notices, centers, allocations, applications, admit cards, and published results.
 
-### Step 6: Execute and Test Laboratory Queries from `queries.sql`
-Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) and execute individual queries in the Supabase SQL Editor to test and demonstrate DBMS laboratory concepts.
+### Step 4: Execute Laboratory Queries from `queries.sql`
+Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20Project/database/queries/queries.sql) and execute individual queries in the Supabase SQL Editor to test, demonstrate, and verify DBMS laboratory exercises.
 
 ---
 
@@ -190,14 +182,14 @@ Open [`database/queries/queries.sql`](file:///C:/Users/UJWAL/DBMS%20Mini%20-%20P
 
 | Entity | Records | Key Details & Identifiers |
 |:---|:---:|:---|
-| **`candidates`** | 3 | Rahul Sharma (`CAND2027001`), Priya Nair (`CAND2027002`), Arjun Patel (`CAND2027003`). |
-| **`educational_qualifications`** | 8 | SSLC, PUC, and B.E. records with realistic boards, institutions, and percentages. |
-| **`examinations`** | 3 | `KSGRE2027` (KPSC - 250 vac, ₹500), `CGCRE2027` (SSC - 500 vac, ₹300), `NASPE2027` (UPSC - 100 vac, ₹100). |
-| **`exam_centers`** | 3 | Bengaluru (`BLR-GFGC-01`), Mangaluru (`MNG-UCOL-02`), Mumbai (`MUM-GEC-03`). |
-| **`examination_centers`** | 7 | Center-to-exam allocations with valid quotas within total venue capacities. |
-| **`applications`** | 4 | `APP2027001` (Approved), `APP2027002` (Approved), `APP2027003` (Approved), `APP2027004` (Submitted/Pending). |
-| **`admit_cards`** | 3 | Hall tickets with unique roll numbers: `ROLL2027101`, `ROLL2027102`, `ROLL2027201`. |
-| **`results`** | 3 | Realistic scores: 92.50 (Rank 1, Arjun), 86.50 (Rank 1, Rahul), 78.00 (Rank 2, Priya). |
+| **`candidates`** | 3 | Rahul Sharma (`CND-2027-00101`), Priya Patel (`CND-2027-00102`), Amit Kumar (`CND-2027-00103`). |
+| **`educational_qualifications`** | 8 | SSLC, PUC, and Undergraduate records across CBSE, ICSE, Karnataka State Board, and DTU/VTU universities. |
+| **`examinations`** | 3 | Scheduled for 2027: `SSC-CGL-2027` (8,400 vac, ₹100), `UPSC-CSE-2027` (1,056 vac, ₹100), `RRB-NTPC-2027` (11,558 vac, ₹250). |
+| **`exam_centers`** | 4 | New Delhi (`DEL-KV-101`, cap: 600), Bengaluru (`BLR-GAC-201`, cap: 500), Lucknow (`LKO-NP-301`, cap: 450), Mumbai (`MUM-GEC-401`, cap: 550). |
+| **`examination_centers`** | 7 | Designated center allocations per examination with seat quotas strictly within venue physical capacities. |
+| **`applications`** | 4 | `APP-2027-0001` (Accepted), `APP-2027-0002` (Accepted), `APP-2027-0003` (Accepted), `APP-2027-0004` (Submitted/Pending Review). |
+| **`admit_cards`** | 3 | Hall tickets with unique roll numbers: `ROLL-SSCCGL-27001`, `ROLL-SSCCGL-27002`, `ROLL-RRBNTPC-27001`. |
+| **`results`** | 3 | Published merit scorecards: 86.50% (Rank 1, Rahul), 78.00% (Rank 2, Priya), 92.50% (Rank 1, Amit). |
 
 ---
 

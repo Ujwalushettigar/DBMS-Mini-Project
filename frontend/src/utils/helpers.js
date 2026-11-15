@@ -63,6 +63,8 @@ export const getStatusVariant = (status) => {
     case 'paid':
     case 'pass':
     case 'completed':
+    case 'active':
+    case 'open':
       return 'success';
     case 'submitted':
     case 'under_review':
@@ -70,16 +72,19 @@ export const getStatusVariant = (status) => {
     case 'pending':
     case 'draft':
       return 'warning';
+    case 'upcoming':
+    case 'withheld':
+    case 'waived':
+    case 'info':
+      return 'info';
     case 'rejected':
     case 'closed':
     case 'fail':
+    case 'failed':
     case 'withdrawn':
+    case 'cancelled':
       return 'danger';
-    case 'withheld':
-    case 'waived':
-      return 'blue';
     default:
       return 'neutral';
   }
 };
-

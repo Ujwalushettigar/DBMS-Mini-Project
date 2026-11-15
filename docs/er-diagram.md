@@ -119,13 +119,27 @@ erDiagram
         uuid application_id FK,UK "references applications"
         numeric marks_obtained
         numeric maximum_marks
+        numeric percentage "GENERATED STORED"
         int rank
-        varchar result_status "pass, fail, withheld"
+        varchar result_status "pass, fail, withheld, absent, pending, qualified, not_qualified"
+        boolean is_published
         timestamptz published_at
         text remarks
         timestamptz created_at
     }
+
+    EXAMINATION_ARCHIVES_PARTITIONED {
+        uuid archive_id PK "Composite PK with examination_date"
+        date examination_date PK "Range Partitioning Key"
+        varchar examination_code
+        varchar examination_name
+        varchar conducting_authority
+        int total_vacancies
+    }
 ```
+
+> [!NOTE]
+> `EXAMINATION_ARCHIVES_PARTITIONED` is the academic laboratory demonstration object implementing PostgreSQL Declarative Range Partitioning by examination date (sub-partitions `exams_q1_2026` through `exams_q4_2026`).
 
 ---
 

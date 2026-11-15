@@ -4,9 +4,11 @@ import { Modal } from '../components/common/Modal';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { EmptyState } from '../components/common/EmptyState';
 import { Alert } from '../components/common/Alert';
-import { GraduationCap, Plus, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
+import { GraduationCap, Plus, Trash2, Edit2 } from 'lucide-react';
 
-export const Qualifications = () => {
+export function Qualifications() {
   const [qualifications, setQualifications] = useState([]);
   const [candidate, setCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -112,26 +114,25 @@ export const Qualifications = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner message="Retrieving academic qualifications..." />;
+  if (loading) return <LoadingSpinner label="Retrieving academic qualifications..." />;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Educational Qualifications</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Maintain your academic records (SSLC, PUC, Diploma, Undergraduate, Postgraduate) to meet examination eligibility criteria.
-          </p>
-        </div>
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Qualification</span>
-        </button>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Educational Qualifications"
+        subtitle="Maintain verified academic records (SSLC, 10+2, Diploma, UG, PG) for examination eligibility scrutiny"
+        crumbs={[{ label: 'Dashboard', to: '/candidate/dashboard' }, { label: 'Qualifications' }]}
+        actions={
+          <button
+            type="button"
+            onClick={openAddModal}
+            className="gov-btn gov-btn-accent text-xs"
+          >
+            <Plus size={16} />
+            <span>Add Qualification</span>
+          </button>
+        }
+      />
 
       {alert && (
         <Alert
@@ -141,90 +142,111 @@ export const Qualifications = () => {
         />
       )}
 
-      {/* Qualifications Table */}
-      {qualifications.length === 0 ? (
-        <EmptyState
-          title="No qualifications recorded"
-          description="Add your academic degrees and percentages to apply for public examinations."
-          icon={GraduationCap}
-          action={
-            <button
-              onClick={openAddModal}
-              className="px-4 py-2 bg-blue-900 text-white rounded text-xs font-semibold hover:bg-blue-800"
-            >
-              Add First Degree
-            </button>
-          }
-        />
-      ) : (
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
+      {/* Qualifications Section */}
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <GraduationCap size={18} />
+            <span>Recorded Academic Credentials</span>
+          </div>
+          <span className="text-xs text-slate-500 font-normal">
+            Total entries: <strong>{qualifications.length}</strong>
+          </span>
+        </div>
+
+        {qualifications.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title="No academic qualifications recorded"
+              message="Add your academic degrees and percentages to apply for public recruitment examinations."
+              icon={GraduationCap}
+              action={
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className="gov-btn gov-btn-primary text-xs"
+                >
+                  <Plus size={14} /> Add First Qualification
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Qualification Level</th>
-                  <th className="px-6 py-3">Institution Name</th>
-                  <th className="px-6 py-3">Board / University</th>
-                  <th className="px-6 py-3">Passing Year</th>
-                  <th className="px-6 py-3">Percentage (%)</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
+                  <th>Qualification Level</th>
+                  <th>Institution / College</th>
+                  <th>Board / University</th>
+                  <th>Passing Year</th>
+                  <th>Percentage (%)</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody>
                 {qualifications.map((q) => (
-                  <tr key={q.qualification_id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-4 font-semibold text-blue-950">
+                  <tr key={q.qualification_id}>
+                    <td className="font-semibold text-gov-800">
                       {q.qualification_level}
                     </td>
-                    <td className="px-6 py-4 text-slate-800 font-medium">
+                    <td className="font-medium text-slate-800">
                       {q.institution_name}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="text-slate-600">
                       {q.board_or_university}
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-mono">
+                    <td className="font-mono text-slate-600">
                       {q.passing_year}
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-900">
+                    <td className="font-bold text-gov-900">
                       {q.percentage}%
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => openEditModal(q)}
-                        className="text-blue-700 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
-                        title="Edit Qualification"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(q.qualification_id)}
-                        className="text-rose-600 hover:text-rose-800 p-1 hover:bg-rose-50 rounded"
-                        title="Delete Qualification"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    <td className="text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(q)}
+                          className="gov-btn gov-btn-outline !p-1.5 text-xs"
+                          title="Edit Qualification"
+                          aria-label={`Edit ${q.qualification_level}`}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(q.qualification_id)}
+                          className="gov-btn gov-btn-danger !p-1.5 text-xs"
+                          title="Delete Qualification"
+                          aria-label={`Delete ${q.qualification_level}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Modal: Add/Edit Qualification */}
       <Modal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={isEditing ? 'Modify Educational Qualification' : 'Add Educational Qualification'}
       >
-        <form onSubmit={handleSave} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Qualification Level *</label>
+        <form onSubmit={handleSave} className="space-y-4 text-xs" noValidate>
+          <p className="text-xs text-slate-500 border-b border-line pb-2">Fields marked * are mandatory</p>
+
+          <FormField label="Qualification Level" htmlFor="q_level" required>
             <select
+              id="q_level"
               value={form.qualification_level}
               onChange={(e) => setForm({ ...form, qualification_level: e.target.value })}
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white"
+              className="gov-input"
             >
               <option value="SSLC">SSLC (10th Standard)</option>
               <option value="PUC">PUC (12th Standard / Pre-University)</option>
@@ -233,48 +255,49 @@ export const Qualifications = () => {
               <option value="Postgraduate">Postgraduate (M.Tech / M.Sc / M.A / MBA)</option>
               <option value="Other">Other Equivalent Qualification</option>
             </select>
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Institution / School / College Name *</label>
+          <FormField label="Institution / School / College Name" htmlFor="inst_name" required>
             <input
+              id="inst_name"
               type="text"
               required
               value={form.institution_name}
               onChange={(e) => setForm({ ...form, institution_name: e.target.value })}
               placeholder="e.g. National Institute of Engineering"
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+              className="gov-input"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Board or University *</label>
+          <FormField label="Board or University" htmlFor="board_univ" required>
             <input
+              id="board_univ"
               type="text"
               required
               value={form.board_or_university}
               onChange={(e) => setForm({ ...form, board_or_university: e.target.value })}
-              placeholder="e.g. CBSE / State Board / VTU / Bangalore University"
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+              placeholder="e.g. CBSE / State Board / VTU / Central University"
+              className="gov-input"
             />
-          </div>
+          </FormField>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Passing Year *</label>
+            <FormField label="Passing Year" htmlFor="pass_year" required>
               <input
+                id="pass_year"
                 type="number"
                 required
                 min="1960"
                 max="2035"
                 value={form.passing_year}
                 onChange={(e) => setForm({ ...form, passing_year: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Percentage (%) *</label>
+            </FormField>
+
+            <FormField label="Percentage / CGPA Equivalent (%)" htmlFor="pct" required>
               <input
+                id="pct"
                 type="number"
                 step="0.01"
                 required
@@ -283,22 +306,22 @@ export const Qualifications = () => {
                 value={form.percentage}
                 onChange={(e) => setForm({ ...form, percentage: e.target.value })}
                 placeholder="e.g. 84.50"
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
+            </FormField>
           </div>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-end space-x-2">
+          <div className="pt-3 border-t border-line flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded hover:bg-slate-50 text-xs"
+              className="gov-btn gov-btn-outline text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-900 text-white rounded font-semibold hover:bg-blue-800 text-xs shadow-sm"
+              className="gov-btn gov-btn-primary text-xs"
             >
               {isEditing ? 'Save Changes' : 'Add Record'}
             </button>
@@ -307,7 +330,6 @@ export const Qualifications = () => {
       </Modal>
     </div>
   );
-};
+}
 
 export default Qualifications;
-

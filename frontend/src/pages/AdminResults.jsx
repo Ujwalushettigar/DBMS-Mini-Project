@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { resultAPI, applicationAPI, examAPI } from '../services/api';
-import Badge from '../components/common/Badge';
-import Modal from '../components/common/Modal';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import Alert from '../components/common/Alert';
-import EmptyState from '../components/common/EmptyState';
+import { Badge } from '../components/common/Badge';
+import { Modal } from '../components/common/Modal';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { Alert } from '../components/common/Alert';
+import { EmptyState } from '../components/common/EmptyState';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
 import { 
-  Trophy, Plus, Search, Filter, CheckCircle2, XCircle, 
-  Share2, Eye, Award, FileSpreadsheet, RefreshCw, BarChart2 
+  Award, Plus, Search, Filter, CheckCircle2, 
+  Share2, RefreshCw 
 } from 'lucide-react';
-import { formatDate, getStatusVariant } from '../utils/helpers';
+import { formatDate } from '../utils/helpers';
 
-export default function AdminResults() {
+export function AdminResults() {
   const [results, setResults] = useState([]);
   const [applications, setApplications] = useState([]);
   const [examinations, setExaminations] = useState([]);
@@ -105,12 +107,14 @@ export default function AdminResults() {
   };
 
   const filteredResults = results.filter(res => {
-    const matchesSearch = 
-      (res.candidate?.full_name && res.candidate.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (res.candidate?.candidate_code && res.candidate.candidate_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (res.application?.application_number && res.application.application_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (res.examination?.exam_title && res.examination.exam_title.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesSearch;
+    const term = searchTerm.toLowerCase();
+    const candName = (res.candidate?.full_name || '').toLowerCase();
+    const candNo = (res.candidate?.candidate_number || res.candidate?.candidate_code || '').toLowerCase();
+    const appNo = (res.application?.application_number || '').toLowerCase();
+    const examName = (res.examination?.examination_name || res.examination?.exam_title || '').toLowerCase();
+    const examCode = (res.examination?.examination_code || res.examination?.exam_code || '').toLowerCase();
+
+    return !searchTerm || candName.includes(term) || candNo.includes(term) || appNo.includes(term) || examName.includes(term) || examCode.includes(term);
   });
 
   const stats = {
@@ -121,30 +125,32 @@ export default function AdminResults() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Result Evaluation & Merit Lists</h1>
-          <p className="text-sm text-slate-600">Enter marks, generate merit rankings, verify cutoff criteria, and publish official candidate scorecards.</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={fetchData}
-            className="inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-300 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
-          </button>
-          <button
-            onClick={handleOpenEntryModal}
-            className="inline-flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 rounded-md shadow-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Enter Evaluation Score</span>
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Result Evaluation & Merit Lists"
+        subtitle="Grade candidate answer sheets, calculate merit rankings, verify cutoff criteria, and publish official scorecards"
+        crumbs={[{ label: 'Admin', to: '/admin/dashboard' }, { label: 'Results' }]}
+        actions={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={fetchData}
+              className="gov-btn gov-btn-outline text-xs"
+            >
+              <RefreshCw size={14} />
+              <span>Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenEntryModal}
+              className="gov-btn gov-btn-accent text-xs"
+            >
+              <Plus size={14} />
+              <span>Enter Evaluation Score</span>
+            </button>
+          </div>
+        }
+      />
 
       {alert && (
         <Alert 
@@ -155,133 +161,146 @@ export default function AdminResults() {
       )}
 
       {/* KPI Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Total Evaluated</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</p>
+      <section aria-label="Evaluation metrics" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="gov-card p-4 text-center border-l-4 border-gov-700">
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Evaluated</p>
+          <p className="text-2xl font-bold text-gov-900 mt-0.5">{stats.total}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-emerald-200 shadow-sm text-center">
-          <p className="text-xs font-semibold text-emerald-600 uppercase">Passed Candidates</p>
-          <p className="text-2xl font-bold text-emerald-700 mt-1">{stats.passed}</p>
+        <div className="gov-card p-4 text-center border-l-4 border-india-green">
+          <p className="text-[11px] font-semibold text-india-green uppercase tracking-wide">Qualified (Pass)</p>
+          <p className="text-2xl font-bold text-india-green mt-0.5">{stats.passed}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-rose-200 shadow-sm text-center">
-          <p className="text-xs font-semibold text-rose-600 uppercase">Failed Candidates</p>
-          <p className="text-2xl font-bold text-rose-700 mt-1">{stats.failed}</p>
+        <div className="gov-card p-4 text-center border-l-4 border-red-500">
+          <p className="text-[11px] font-semibold text-red-600 uppercase tracking-wide">Unqualified (Fail)</p>
+          <p className="text-2xl font-bold text-red-600 mt-0.5">{stats.failed}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm text-center">
-          <p className="text-xs font-semibold text-blue-600 uppercase">Scorecards Published</p>
-          <p className="text-2xl font-bold text-blue-800 mt-1">{stats.published}</p>
+        <div className="gov-card p-4 text-center border-l-4 border-gov-500">
+          <p className="text-[11px] font-semibold text-gov-600 uppercase tracking-wide">Scorecards Published</p>
+          <p className="text-2xl font-bold text-gov-800 mt-0.5">{stats.published}</p>
         </div>
-      </div>
+      </section>
 
       {/* Filter and Search */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search candidate, exam, app no..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
-          />
-        </div>
+      <section className="gov-card p-4">
+        <div className="flex flex-col md:flex-row gap-3 justify-between items-center text-xs">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search candidate, exam, app no..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="gov-input !pl-9"
+              aria-label="Search results"
+            />
+          </div>
 
-        <div className="flex items-center space-x-3 w-full md:w-auto">
-          <Filter className="w-4 h-4 text-slate-500" />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-sm border border-slate-300 rounded-md py-2 px-3 focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white"
-          >
-            <option value="">All Statuses</option>
-            <option value="pass">Pass</option>
-            <option value="fail">Fail</option>
-            <option value="withheld">Withheld</option>
-          </select>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <Filter size={14} className="text-slate-500" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="gov-input !w-auto"
+              aria-label="Filter by result status"
+            >
+              <option value="">All Statuses</option>
+              <option value="pass">Pass</option>
+              <option value="fail">Fail</option>
+              <option value="withheld">Withheld</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Results Table */}
-      {loading ? (
-        <div className="bg-white p-12 rounded-lg border border-slate-200">
-          <LoadingSpinner size="lg" text="Loading scorecards and evaluation records..." />
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <Award size={18} />
+            <span>Evaluation & Merit Ranking Ledger</span>
+          </div>
+          <span className="text-xs text-slate-500 font-normal">
+            Showing {filteredResults.length} of {results.length} scorecards
+          </span>
         </div>
-      ) : filteredResults.length === 0 ? (
-        <EmptyState
-          icon={Trophy}
-          title="No Results Found"
-          description="No candidate results match your filter. Click 'Enter Evaluation Score' above to grade an accepted applicant."
-        />
-      ) : (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+
+        {loading ? (
+          <LoadingSpinner label="Loading scorecards and evaluation records..." />
+        ) : filteredResults.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              icon={Award}
+              title="No Results Found"
+              message="No candidate results match your filter. Click 'Enter Evaluation Score' above to grade an accepted applicant."
+            />
+          </div>
+        ) : (
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-xs uppercase font-semibold">
-                  <th className="py-3 px-4">Candidate</th>
-                  <th className="py-3 px-4">Examination</th>
-                  <th className="py-3 px-4">Marks Obtained</th>
-                  <th className="py-3 px-4">Percentage</th>
-                  <th className="py-3 px-4">Merit Rank</th>
-                  <th className="py-3 px-4">Result Status</th>
-                  <th className="py-3 px-4">Publication State</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Examination</th>
+                  <th>Marks Obtained</th>
+                  <th>Percentage</th>
+                  <th>Merit Rank</th>
+                  <th>Result Verdict</th>
+                  <th>Publication Status</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {filteredResults.map((res) => (
-                  <tr key={res.result_id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-900">{res.candidate?.full_name || 'N/A'}</div>
-                      <div className="text-xs text-slate-500 font-mono">{res.candidate?.candidate_code}</div>
-                      <div className="text-xs text-slate-400 font-mono">App: {res.application?.application_number}</div>
+                  <tr key={res.result_id}>
+                    <td>
+                      <div className="font-semibold text-slate-900">{res.candidate?.full_name || 'N/A'}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{res.candidate?.candidate_number || res.candidate?.candidate_code}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">App: {res.application?.application_number}</div>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{res.examination?.exam_title || 'N/A'}</div>
-                      <div className="text-xs text-slate-500 font-mono">{res.examination?.exam_code}</div>
+                    <td>
+                      <div className="font-semibold text-gov-800">{res.examination?.examination_name || res.examination?.exam_title || 'N/A'}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{res.examination?.examination_code || res.examination?.exam_code}</div>
                     </td>
-                    <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                    <td className="whitespace-nowrap font-mono font-bold text-gov-900">
                       {res.marks_obtained} / {res.maximum_marks}
                     </td>
-                    <td className="py-3 px-4 font-mono font-semibold text-slate-700">
+                    <td className="whitespace-nowrap font-mono font-semibold text-slate-700">
                       {res.percentage !== undefined ? `${Number(res.percentage).toFixed(2)}%` : 'N/A'}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="whitespace-nowrap">
                       {res.rank ? (
-                        <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                        <span className="font-mono font-bold text-gov-800 bg-gov-50 px-2 py-0.5 rounded border border-line">
                           #{res.rank}
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-400">Unranked</span>
+                        <span className="text-xs text-slate-400 italic">Unranked</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      <Badge variant={getStatusVariant(res.result_status)}>
-                        {res.result_status.toUpperCase()}
-                      </Badge>
+                    <td>
+                      <Badge>{res.result_status}</Badge>
                     </td>
-                    <td className="py-3 px-4">
+                    <td>
                       {res.is_published ? (
-                        <span className="inline-flex items-center space-x-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-medium border border-emerald-200">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1 text-xs text-india-green bg-green-50 px-2 py-0.5 rounded font-semibold border border-green-200">
+                          <CheckCircle2 size={13} />
                           <span>Published</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center space-x-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium border border-amber-200">
+                        <span className="inline-flex items-center gap-1 text-xs text-saffron-600 bg-orange-50 px-2 py-0.5 rounded font-medium border border-saffron-500/30">
                           <span>Draft / Hidden</span>
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                    <td className="text-right whitespace-nowrap">
                       {!res.is_published && (
                         <button
+                          type="button"
                           onClick={() => handlePublish(res.result_id)}
                           disabled={actionLoading}
-                          className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-300 transition-colors"
+                          className="gov-btn gov-btn-accent !py-1 !px-2 text-xs"
                           title="Publish result to candidate portal"
                         >
-                          <Share2 className="w-3.5 h-3.5" />
+                          <Share2 size={13} />
                           <span>Publish</span>
                         </button>
                       )}
@@ -291,47 +310,43 @@ export default function AdminResults() {
               </tbody>
             </table>
           </div>
-          <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
-            <span>Showing {filteredResults.length} of {results.length} scorecards</span>
-            <span>Relational Table: <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200">results</code></span>
-          </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Enter Result Modal */}
       <Modal
-        isOpen={isEntryModalOpen}
+        open={isEntryModalOpen}
         onClose={() => setIsEntryModalOpen(false)}
         title="Enter Candidate Examination Evaluation"
-        size="md"
+        maxWidth="max-w-md"
       >
-        <form onSubmit={handleSaveResult} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Select Candidate Application *
-            </label>
+        <form onSubmit={handleSaveResult} className="space-y-4 text-xs" noValidate>
+          <FormField
+            label="Select Candidate Application"
+            htmlFor="app_select"
+            required
+            hint="Displays accepted applications ready for score entry."
+          >
             <select
+              id="app_select"
               value={formData.application_id}
               onChange={(e) => setFormData({ ...formData, application_id: e.target.value })}
-              className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white"
+              className="gov-input font-medium"
               required
             >
               <option value="">-- Choose Candidate Application --</option>
               {applications.map(app => (
                 <option key={app.application_id} value={app.application_id}>
-                  {app.application_number} - {app.candidate?.full_name} ({app.examination?.exam_code})
+                  {app.application_number} - {app.candidate?.full_name} ({app.examination?.examination_code || app.examination?.exam_code})
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 mt-1">Displays accepted applications ready for score entry.</p>
-          </div>
+          </FormField>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                Marks Obtained *
-              </label>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Marks Obtained" htmlFor="marks_obt" required>
               <input
+                id="marks_obt"
                 type="number"
                 step="0.01"
                 min="0"
@@ -339,86 +354,79 @@ export default function AdminResults() {
                 value={formData.marks_obtained}
                 onChange={(e) => setFormData({ ...formData, marks_obtained: e.target.value })}
                 placeholder="e.g. 84.50"
-                className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono"
+                className="gov-input font-mono"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                Maximum Marks *
-              </label>
+            </FormField>
+
+            <FormField label="Maximum Marks" htmlFor="max_marks" required>
               <input
+                id="max_marks"
                 type="number"
                 step="1"
                 min="1"
                 value={formData.maximum_marks}
                 onChange={(e) => setFormData({ ...formData, maximum_marks: e.target.value })}
                 placeholder="100"
-                className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono"
+                className="gov-input font-mono"
                 required
               />
-            </div>
+            </FormField>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                Merit Rank (Optional)
-              </label>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Merit Rank (Optional)" htmlFor="merit_rank">
               <input
+                id="merit_rank"
                 type="number"
                 min="1"
                 value={formData.rank}
                 onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
                 placeholder="e.g. 1"
-                className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono"
+                className="gov-input font-mono"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                Result Status *
-              </label>
+            </FormField>
+
+            <FormField label="Result Verdict" htmlFor="res_verdict" required>
               <select
+                id="res_verdict"
                 value={formData.result_status}
                 onChange={(e) => setFormData({ ...formData, result_status: e.target.value })}
-                className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white font-medium"
+                className="gov-input font-medium"
                 required
               >
                 <option value="pass">Pass</option>
                 <option value="fail">Fail</option>
                 <option value="withheld">Withheld</option>
               </select>
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Remarks / Evaluation Notes
-            </label>
+          <FormField label="Evaluation Remarks / Notes" htmlFor="eval_remarks">
             <textarea
+              id="eval_remarks"
               rows={2}
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              placeholder="Candidate qualified for document verification / interview round."
-              className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+              placeholder="Candidate qualified for document scrutiny / next stage."
+              className="gov-input"
             />
-          </div>
+          </FormField>
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200">
+          <div className="flex justify-end gap-2 pt-3 border-t border-line">
             <button
               type="button"
               onClick={() => setIsEntryModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 text-sm font-medium"
+              className="gov-btn gov-btn-outline text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={actionLoading}
-              className="px-4 py-2 bg-blue-900 text-white rounded-md hover:bg-blue-800 text-sm font-medium disabled:opacity-50 inline-flex items-center space-x-2"
+              className="gov-btn gov-btn-primary text-xs"
             >
-              {actionLoading && <LoadingSpinner size="sm" color="white" />}
-              <span>Save Evaluation Score</span>
+              {actionLoading ? 'Saving Score...' : 'Save Evaluation Score'}
             </button>
           </div>
         </form>
@@ -427,3 +435,4 @@ export default function AdminResults() {
   );
 }
 
+export default AdminResults;

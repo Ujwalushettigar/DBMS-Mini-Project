@@ -6,9 +6,11 @@ import { Modal } from '../components/common/Modal';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { EmptyState } from '../components/common/EmptyState';
 import { Alert } from '../components/common/Alert';
-import { Layers, Plus, Edit2, Trash2, CheckCircle2, XCircle, Eye } from 'lucide-react';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
+import { Layers, Plus, Edit2, Trash2 } from 'lucide-react';
 
-export const AdminExaminations = () => {
+export function AdminExaminations() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -136,22 +138,22 @@ export const AdminExaminations = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Examination Notification Management</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Create, publish, close, and maintain competitive public examination advertisements and vacancy quotas.
-          </p>
-        </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Examination</span>
-        </button>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Examination Notice Management"
+        subtitle="Create, configure, publish, close, and manage competitive public recruitment notifications"
+        crumbs={[{ label: 'Admin', to: '/admin/dashboard' }, { label: 'Examinations' }]}
+        actions={
+          <button
+            type="button"
+            onClick={openAdd}
+            className="gov-btn gov-btn-accent text-xs"
+          >
+            <Plus size={16} />
+            <span>New Examination</span>
+          </button>
+        }
+      />
 
       {alert && (
         <Alert
@@ -161,251 +163,290 @@ export const AdminExaminations = () => {
         />
       )}
 
-      {loading ? (
-        <LoadingSpinner message="Querying examination notices..." />
-      ) : exams.length === 0 ? (
-        <EmptyState
-          title="No examinations created yet"
-          description="Create your first government examination notification to open online candidate applications."
-          icon={Layers}
-        />
-      ) : (
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
+      {/* Examinations Table */}
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <Layers size={18} />
+            <span>Official Examination Notices Register</span>
+          </div>
+          <span className="text-xs text-slate-500 font-normal">
+            Total notices: <strong>{exams.length}</strong>
+          </span>
+        </div>
+
+        {loading ? (
+          <LoadingSpinner label="Querying examination notices..." />
+        ) : exams.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title="No examinations created yet"
+              message="Create your first government recruitment examination notification to open candidate applications."
+              icon={Layers}
+              action={
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="gov-btn gov-btn-primary text-xs"
+                >
+                  <Plus size={14} /> Create Examination Notice
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Code</th>
-                  <th className="px-6 py-3">Examination Name</th>
-                  <th className="px-6 py-3">Authority</th>
-                  <th className="px-6 py-3">Vacancies</th>
-                  <th className="px-6 py-3">Dates (Apply / Exam)</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
+                  <th>Notice Code</th>
+                  <th>Examination Title</th>
+                  <th>Conducting Authority</th>
+                  <th>Vacancies</th>
+                  <th>Key Dates (Deadline / Exam)</th>
+                  <th>Status</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody>
                 {exams.map((e) => (
-                  <tr key={e.examination_id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-4 font-mono font-bold text-blue-950">
+                  <tr key={e.examination_id}>
+                    <td className="whitespace-nowrap font-mono text-xs font-bold text-gov-900">
                       {e.examination_code}
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">
-                      {e.examination_name}
+                    <td className="font-semibold text-slate-900">
+                      <div>{e.examination_name}</div>
+                      <div className="text-[11px] text-slate-500 font-normal">Fee: {formatCurrency(e.application_fee)}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="text-slate-600 text-xs">
                       {e.conducting_authority}
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-800">
-                      {e.total_vacancies.toLocaleString()}
+                    <td className="font-bold text-gov-800 text-xs">
+                      {Number(e.total_vacancies).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      <div>Deadline: <strong>{formatDate(e.application_end_date)}</strong></div>
+                    <td className="text-slate-600 text-xs whitespace-nowrap">
+                      <div>Apply by: <strong>{formatDate(e.application_end_date)}</strong></div>
                       <div>Exam: <strong>{formatDate(e.examination_date)}</strong></div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td>
                       <Badge>{e.examination_status}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-1">
-                      {/* State Transitions */}
-                      {e.examination_status === 'draft' && (
-                        <button
-                          onClick={() => setStatus(e.examination_id, 'published')}
-                          className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[11px] font-semibold border border-emerald-200"
-                        >
-                          Publish
-                        </button>
-                      )}
-                      {e.examination_status === 'published' && (
-                        <button
-                          onClick={() => setStatus(e.examination_id, 'closed')}
-                          className="px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded text-[11px] font-semibold border border-amber-200"
-                        >
-                          Close Apps
-                        </button>
-                      )}
-                      {e.examination_status === 'closed' && (
-                        <button
-                          onClick={() => setStatus(e.examination_id, 'completed')}
-                          className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[11px] font-semibold border border-blue-200"
-                        >
-                          Complete
-                        </button>
-                      )}
+                    <td className="text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        {/* State Transitions */}
+                        {e.examination_status === 'draft' && (
+                          <button
+                            type="button"
+                            onClick={() => setStatus(e.examination_id, 'published')}
+                            className="gov-btn gov-btn-accent !py-1 !px-2 text-xs"
+                          >
+                            Publish
+                          </button>
+                        )}
+                        {e.examination_status === 'published' && (
+                          <button
+                            type="button"
+                            onClick={() => setStatus(e.examination_id, 'closed')}
+                            className="gov-btn gov-btn-outline !py-1 !px-2 text-xs"
+                          >
+                            Close
+                          </button>
+                        )}
+                        {e.examination_status === 'closed' && (
+                          <button
+                            type="button"
+                            onClick={() => setStatus(e.examination_id, 'completed')}
+                            className="gov-btn gov-btn-primary !py-1 !px-2 text-xs"
+                          >
+                            Complete
+                          </button>
+                        )}
 
-                      <button
-                        onClick={() => openEdit(e)}
-                        className="p-1.5 text-slate-700 hover:bg-slate-100 rounded"
-                        title="Edit Examination"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(e.examination_id)}
-                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
-                        title="Delete Examination"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(e)}
+                          className="gov-btn gov-btn-outline !p-1.5 text-xs"
+                          title="Edit Examination"
+                          aria-label={`Edit ${e.examination_code}`}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(e.examination_id)}
+                          className="gov-btn gov-btn-danger !p-1.5 text-xs"
+                          title="Delete Examination"
+                          aria-label={`Delete ${e.examination_code}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Modal: Create/Edit Examination */}
       <Modal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={isEditing ? 'Edit Examination Notification' : 'Create Examination Notification'}
         maxWidth="max-w-3xl"
       >
-        <form onSubmit={handleSave} className="space-y-4 text-xs">
+        <form onSubmit={handleSave} className="space-y-4 text-xs" noValidate>
+          <p className="text-xs text-slate-500 border-b border-line pb-2">Fields marked * are mandatory</p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Examination Code *</label>
+            <FormField label="Examination Code" htmlFor="exam_code" required hint="e.g. CRC-CSE-2026 or SSC-CGL-2026">
               <input
+                id="exam_code"
                 type="text"
                 required
                 value={form.examination_code}
                 onChange={(e) => setForm({ ...form, examination_code: e.target.value })}
-                placeholder="e.g. UPSC-CSE-2026 or SSC-CGL-2026"
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none uppercase font-mono"
+                placeholder="CRC-CSE-2026"
+                className="gov-input uppercase font-mono"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Conducting Authority *</label>
+            </FormField>
+
+            <FormField label="Conducting Authority" htmlFor="cond_auth" required>
               <input
+                id="cond_auth"
                 type="text"
                 required
                 value={form.conducting_authority}
                 onChange={(e) => setForm({ ...form, conducting_authority: e.target.value })}
-                placeholder="e.g. Staff Selection Commission"
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                placeholder="e.g. Central Recruitment Commission"
+                className="gov-input"
               />
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Official Examination Name *</label>
+          <FormField label="Official Examination Name" htmlFor="exam_name" required>
             <input
+              id="exam_name"
               type="text"
               required
               value={form.examination_name}
               onChange={(e) => setForm({ ...form, examination_name: e.target.value })}
-              placeholder="e.g. Combined Graduate Level Examination 2026"
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+              placeholder="e.g. Combined Civil Services Examination 2026"
+              className="gov-input"
             />
-          </div>
+          </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Application Start Date *</label>
+            <FormField label="Application Start Date" htmlFor="app_start" required>
               <input
+                id="app_start"
                 type="date"
                 required
                 value={form.application_start_date}
                 onChange={(e) => setForm({ ...form, application_start_date: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Application Closing Date *</label>
+            </FormField>
+
+            <FormField label="Application Closing Date" htmlFor="app_end" required>
               <input
+                id="app_end"
                 type="date"
                 required
                 value={form.application_end_date}
                 onChange={(e) => setForm({ ...form, application_end_date: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Scheduled Exam Date *</label>
+            </FormField>
+
+            <FormField label="Scheduled Exam Date" htmlFor="exam_date" required>
               <input
+                id="exam_date"
                 type="date"
                 required
                 value={form.examination_date}
                 onChange={(e) => setForm({ ...form, examination_date: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Total Vacancies *</label>
+            <FormField label="Total Vacancies" htmlFor="tot_vac" required>
               <input
+                id="tot_vac"
                 type="number"
                 required
                 min="0"
                 value={form.total_vacancies}
                 onChange={(e) => setForm({ ...form, total_vacancies: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Application Fee (INR) *</label>
+            </FormField>
+
+            <FormField label="Application Fee (INR)" htmlFor="fee" required>
               <input
+                id="fee"
                 type="number"
                 step="0.01"
                 min="0"
                 required
                 value={form.application_fee}
                 onChange={(e) => setForm({ ...form, application_fee: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Lifecycle Status *</label>
+            </FormField>
+
+            <FormField label="Lifecycle Status" htmlFor="lifecycle_status" required>
               <select
+                id="lifecycle_status"
                 value={form.examination_status}
                 onChange={(e) => setForm({ ...form, examination_status: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white font-medium"
+                className="gov-input font-medium"
               >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="closed">Closed</option>
                 <option value="completed">Completed</option>
               </select>
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Eligibility Criteria</label>
+          <FormField label="Prescribed Eligibility Criteria" htmlFor="eligibility">
             <textarea
-              rows="2"
+              id="eligibility"
+              rows={2}
               value={form.eligibility_criteria}
               onChange={(e) => setForm({ ...form, eligibility_criteria: e.target.value })}
               placeholder="e.g. Bachelor Degree from any recognized university. Age between 18 and 32 years."
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
-            ></textarea>
-          </div>
+              className="gov-input"
+            />
+          </FormField>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Scope & Description</label>
+          <FormField label="Scope & Description" htmlFor="description">
             <textarea
-              rows="2"
+              id="description"
+              rows={2}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Recruitment notice scope and details..."
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
-            ></textarea>
-          </div>
+              placeholder="Recruitment notice scope, post details, syllabus outline..."
+              className="gov-input"
+            />
+          </FormField>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-end space-x-2">
+          <div className="pt-3 border-t border-line flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded text-xs hover:bg-slate-50"
+              className="gov-btn gov-btn-outline text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-900 text-white rounded font-semibold text-xs hover:bg-blue-800 shadow-sm"
+              className="gov-btn gov-btn-primary text-xs"
             >
               {isEditing ? 'Save Changes' : 'Publish Notice'}
             </button>
@@ -414,7 +455,6 @@ export const AdminExaminations = () => {
       </Modal>
     </div>
   );
-};
+}
 
 export default AdminExaminations;
-

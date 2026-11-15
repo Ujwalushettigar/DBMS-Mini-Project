@@ -1,32 +1,32 @@
 import React from 'react';
 import { getStatusVariant } from '../../utils/helpers';
 
-export const Badge = ({ children, variant, size = 'md' }) => {
-  const calculatedVariant = variant || getStatusVariant(children);
-
-  const variantStyles = {
-    success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    warning: 'bg-amber-50 text-amber-700 border-amber-200',
-    danger: 'bg-rose-50 text-rose-700 border-rose-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    neutral: 'bg-slate-100 text-slate-700 border-slate-200'
-  };
-
-  const sizeStyles = {
-    sm: 'px-2 py-0.5 text-xs',
-    md: 'px-2.5 py-1 text-xs',
-    lg: 'px-3 py-1.5 text-sm'
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center font-medium rounded-full border capitalize ${variantStyles[calculatedVariant] || variantStyles.neutral} ${sizeStyles[size]}`}
-    >
-      <span className="w-1.5 h-1.5 mr-1.5 rounded-full bg-current opacity-70"></span>
-      {children ? children.toString().replace('_', ' ') : 'N/A'}
-    </span>
-  );
+const styles = {
+  success: 'bg-green-100 text-green-800 border-green-300',
+  warning: 'bg-amber-100 text-amber-800 border-amber-300',
+  danger: 'bg-red-100 text-red-800 border-red-300',
+  info: 'bg-gov-50 text-gov-700 border-gov-200',
+  blue: 'bg-gov-50 text-gov-700 border-gov-200',
+  neutral: 'bg-slate-100 text-slate-700 border-slate-300',
 };
 
-export default Badge;
+const sizeStyles = {
+  sm: 'px-1.5 py-0.5 text-[11px]',
+  md: 'px-2 py-0.5 text-xs',
+  lg: 'px-2.5 py-1 text-sm'
+};
 
+export function Badge({ variant, size = 'md', children }) {
+  const calculatedVariant = variant || (typeof children === 'string' ? getStatusVariant(children) : 'neutral');
+  const styleCls = styles[calculatedVariant] ?? styles.neutral;
+  const szCls = sizeStyles[size] ?? sizeStyles.md;
+  const content = typeof children === 'string' ? children.replace(/_/g, ' ') : children;
+
+  return (
+    <span className={`inline-flex items-center rounded border font-semibold capitalize ${styleCls} ${szCls}`}>
+      {content ?? 'N/A'}
+    </span>
+  );
+}
+
+export default Badge;

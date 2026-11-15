@@ -5,19 +5,20 @@ import { useAuth } from '../context/AuthContext';
 import { StatsCard } from '../components/common/StatsCard';
 import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { formatDate } from '../utils/helpers';
 import {
   FileText,
   Clock,
   CheckCircle2,
   Layers,
-  CreditCard,
+  Ticket,
   Award,
-  ArrowRight,
-  AlertCircle
+  ArrowRight
 } from 'lucide-react';
 
-export const CandidateDashboard = () => {
+export function CandidateDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,157 +39,181 @@ export const CandidateDashboard = () => {
     fetchDashboard();
   }, []);
 
-  if (loading) return <LoadingSpinner message="Loading candidate metrics and applications..." />;
+  if (loading) return <LoadingSpinner label="Loading candidate metrics and applications..." />;
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold text-blue-900 uppercase tracking-wider block">
-            Candidate Portal Dashboard
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-0.5">
-            Welcome, {user?.full_name || 'Aspirant'}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Registration No: <strong className="font-mono text-slate-800">{user?.candidate_number || 'CND-2026-ACTIVE'}</strong> • {user?.email}
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-2">
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Candidate Dashboard"
+        subtitle="Recruitment services, examination notices, admit cards, and published merit results"
+        crumbs={[{ label: 'Dashboard' }]}
+        actions={
           <Link
             to="/candidate/examinations"
-            className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
+            className="gov-btn gov-btn-accent text-xs"
           >
             Apply for Examination
           </Link>
+        }
+      />
+
+      {/* Welcome Dossier */}
+      <section className="gov-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-gov-700">
+        <div>
+          <span className="text-xs font-semibold text-gov-700 uppercase tracking-wider block">
+            Applicant Identification Dossier
+          </span>
+          <h2 className="text-xl font-bold text-gov-900 mt-0.5">
+            Welcome, {user?.full_name || 'Aspirant'}
+          </h2>
+          <p className="text-xs text-slate-600 mt-1">
+            Candidate No: <strong className="font-mono text-gov-800">{user?.candidate_number || 'CND-2026-ACTIVE'}</strong> • Email: <span className="font-medium text-slate-800">{user?.email}</span>
+          </p>
         </div>
-      </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            to="/candidate/profile"
+            className="gov-btn gov-btn-outline text-xs"
+          >
+            View Profile
+          </Link>
+          <Link
+            to="/candidate/examinations"
+            className="gov-btn gov-btn-primary text-xs"
+          >
+            Browse Exams
+          </Link>
+        </div>
+      </section>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section aria-label="Key performance indicators" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Total Applications"
           value={data?.total_applications ?? 0}
           icon={FileText}
-          color="blue"
-          description="Submitted notices"
+          tone="blue"
+          hint="Submitted notices"
         />
         <StatsCard
           title="Pending Verification"
           value={data?.pending_applications ?? 0}
           icon={Clock}
-          color="amber"
-          description="Under scrutiny"
+          tone="saffron"
+          hint="Under scrutiny"
         />
         <StatsCard
           title="Accepted Applications"
           value={data?.accepted_applications ?? 0}
           icon={CheckCircle2}
-          color="green"
-          description="Cleared for exam"
+          tone="green"
+          hint="Cleared for exam"
         />
         <StatsCard
           title="Available Exams"
           value={data?.available_examinations ?? 0}
           icon={Layers}
-          color="purple"
-          description="Open for registration"
+          tone="blue"
+          hint="Open for registration"
         />
-      </div>
+      </section>
 
       {/* Secondary Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
-              <CreditCard className="w-6 h-6" />
-            </div>
+        <div className="gov-card p-4 flex items-center justify-between border-l-4 border-india-green">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-50 text-india-green">
+              <Ticket size={22} />
+            </span>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase">Admit Cards Issued</p>
-              <h4 className="text-xl font-bold text-slate-900 mt-0.5">{data?.admit_cards_count ?? 0} Hall Tickets</h4>
-              <p className="text-xs text-slate-500">Available for print / download</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Admit Cards Issued</p>
+              <h3 className="text-xl font-bold text-gov-900 mt-0.5">{data?.admit_cards_count ?? 0} Hall Tickets</h3>
+              <p className="text-xs text-slate-500">Available for print / verification</p>
             </div>
           </div>
           <Link
             to="/candidate/admit-cards"
-            className="text-xs font-semibold text-blue-900 hover:text-blue-700 flex items-center space-x-1"
+            className="gov-btn gov-btn-outline text-xs"
           >
             <span>View Cards</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-200">
-              <Award className="w-6 h-6" />
-            </div>
+        <div className="gov-card p-4 flex items-center justify-between border-l-4 border-gov-700">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gov-50 text-gov-700">
+              <Award size={22} />
+            </span>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase">Declared Results</p>
-              <h4 className="text-xl font-bold text-slate-900 mt-0.5">{data?.published_results_count ?? 0} Scorecards</h4>
-              <p className="text-xs text-slate-500">Verified merit published</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Declared Results</p>
+              <h3 className="text-xl font-bold text-gov-900 mt-0.5">{data?.published_results_count ?? 0} Scorecards</h3>
+              <p className="text-xs text-slate-500">Official merit scores published</p>
             </div>
           </div>
           <Link
             to="/candidate/results"
-            className="text-xs font-semibold text-blue-900 hover:text-blue-700 flex items-center space-x-1"
+            className="gov-btn gov-btn-outline text-xs"
           >
             <span>Check Results</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight size={14} />
           </Link>
         </div>
       </div>
 
       {/* Recent Application Activity */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-            My Recent Applications
-          </h3>
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <span className="font-bold">Recent Application Filings</span>
           <Link
             to="/candidate/applications"
-            className="text-xs font-semibold text-blue-900 hover:text-blue-700 flex items-center space-x-1"
+            className="gov-link text-xs font-semibold inline-flex items-center gap-1"
           >
-            <span>View All</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>View All Applications</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
 
         {(!data?.recent_applications || data.recent_applications.length === 0) ? (
-          <div className="text-center py-8 text-xs text-slate-500">
-            You have not submitted any examination applications yet.
-          </div>
+          <EmptyState
+            title="No applications filed yet"
+            message="Browse available examination notices and submit your application online."
+            action={
+              <Link to="/candidate/examinations" className="gov-btn gov-btn-primary text-xs">
+                Browse Examinations
+              </Link>
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">App Number</th>
-                  <th className="px-6 py-3">Examination</th>
-                  <th className="px-6 py-3">Applied Date</th>
-                  <th className="px-6 py-3">Exam Center</th>
-                  <th className="px-6 py-3">Status</th>
+                  <th>App Number</th>
+                  <th>Examination Notice</th>
+                  <th>Applied On</th>
+                  <th>Designated Center</th>
+                  <th>Scrutiny Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody>
                 {data.recent_applications.map((app) => (
-                  <tr key={app.application_id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-3.5 font-mono font-medium text-blue-950">
+                  <tr key={app.application_id}>
+                    <td className="whitespace-nowrap font-mono text-xs font-semibold text-gov-800">
                       {app.application_number}
                     </td>
-                    <td className="px-6 py-3.5">
-                      <div className="font-semibold text-slate-900">{app.examination?.examination_name}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{app.examination?.examination_code}</div>
+                    <td>
+                      <div className="font-semibold text-gov-900">{app.examination?.examination_name}</div>
+                      <div className="text-[11px] font-mono text-slate-500">{app.examination?.examination_code}</div>
                     </td>
-                    <td className="px-6 py-3.5 text-slate-600">
+                    <td className="whitespace-nowrap text-slate-600">
                       {formatDate(app.applied_at)}
                     </td>
-                    <td className="px-6 py-3.5 text-slate-600">
+                    <td className="text-slate-600">
                       {app.exam_center ? `${app.exam_center.center_name} (${app.exam_center.city})` : 'Pending Allocation'}
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td>
                       <Badge>{app.application_status}</Badge>
                     </td>
                   </tr>
@@ -197,10 +222,9 @@ export const CandidateDashboard = () => {
             </table>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
-};
+}
 
 export default CandidateDashboard;
-

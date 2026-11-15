@@ -1,18 +1,19 @@
 import React from 'react';
-import { FileQuestion } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 
-export const EmptyState = ({ title = 'No records found', description = 'There are no items matching your criteria.', icon: Icon = FileQuestion, action }) => {
+export function EmptyState({ title = 'No records found', message, description, icon: Icon = Inbox, action }) {
+  const text = message || description;
+
   return (
-    <div className="text-center py-12 px-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 mb-3">
-        <Icon className="w-6 h-6" />
-      </div>
-      <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-      <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">{description}</p>
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-slate-500">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gov-50 text-gov-400 mb-1">
+        <Icon size={28} />
+      </span>
+      <p className="font-semibold text-slate-700">{title}</p>
+      {text && <p className="max-w-md text-sm text-slate-500">{text}</p>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
-};
+}
 
 export default EmptyState;
-

@@ -138,12 +138,24 @@ The database consists of **exactly 9 normalized relational tables** operating in
   - `application_id` (UUID, UNIQUE, NOT NULL, FK -> `applications(application_id)` ON DELETE CASCADE)
   - `marks_obtained` (NUMERIC(7,2), NOT NULL, CHECK >= 0.00)
   - `maximum_marks` (NUMERIC(7,2), NOT NULL, CHECK > 0.00)
+  - `percentage` (NUMERIC(5,2), GENERATED ALWAYS AS (ROUND((marks_obtained / NULLIF(maximum_marks, 0)) * 100, 2)) STORED)
   - `rank` (INTEGER, CHECK > 0)
-  - `result_status` (VARCHAR(20), NOT NULL, CHECK: `'pass'`, `'fail'`, `'withheld'`)
+  - `result_status` (VARCHAR(20), NOT NULL, CHECK: `'pass'`, `'fail'`, `'withheld'`, `'absent'`, `'pending'`, `'qualified'`, `'not_qualified'`)
+  - `is_published` (BOOLEAN, DEFAULT FALSE)
   - `published_at` (TIMESTAMP WITH TIME ZONE)
   - `remarks` (TEXT)
   - `created_at` (TIMESTAMP WITH TIME ZONE, DEFAULT NOW())
 - **Marks Range Constraint**: `CHECK (marks_obtained <= maximum_marks)`
+
+### Table 10 (Academic Demonstration): `examination_archives_partitioned`
+- **Purpose**: Demonstrates PostgreSQL Declarative Range Partitioning by date range (`examination_date`).
+- **Composite Primary Key**: `(archive_id, examination_date)`
+- **Partition Key**: `RANGE (examination_date)`
+- **Partitions**:
+  - `exams_q1_2026`: `'2026-01-01'` to `'2026-04-01'`
+  - `exams_q2_2026`: `'2026-04-01'` to `'2026-07-01'`
+  - `exams_q3_2026`: `'2026-07-01'` to `'2026-10-01'`
+  - `exams_q4_2026`: `'2026-10-01'` to `'2027-01-01'`
 
 ---
 
@@ -203,4 +215,20 @@ The database consists of **exactly 9 normalized relational tables** operating in
 | `exam_centers` | `examination_centers` | `center_id` | `CASCADE` | Deleting a center unlinks exam allocations. |
 | `applications` | `admit_cards` | `application_id` | `CASCADE` | Withdrawn or canceled application voids admit card. |
 | `applications` | `results` | `application_id` | `CASCADE` | Removing an application cleans up score entry. |
+
+---
+
+## 5. Active Database Triggers & Consistency Enforcements
+
+The PostgreSQL database enforces relational integrity and procedural rules via seven production triggers:
+
+| # | Trigger Name | Table | Event | Function | Business Purpose |
+|:--|:---|:---|:---|:---|:---|
+| 1 | `on_auth_user_created` | `auth.users` | `AFTER INSERT` | `handle_new_user()` | Automatically inserts `public.profiles` row with strict `role = 'candidate'` upon Supabase signup. |
+| 2 | `trg_profiles_updated_at` | `public.profiles` | `BEFORE UPDATE` | `set_updated_at()` | Automatically maintains ISO-8601 modification timestamp on user profiles. |
+| 3 | `trg_candidates_updated_at` | `public.candidates` | `BEFORE UPDATE` | `set_updated_at()` | Automatically maintains ISO-8601 modification timestamp on candidate dossiers. |
+| 4 | `trg_examinations_updated_at` | `public.examinations` | `BEFORE UPDATE` | `set_updated_at()` | Automatically maintains ISO-8601 modification timestamp on examination notices. |
+| 5 | `trg_applications_updated_at` | `public.applications` | `BEFORE UPDATE` | `set_updated_at()` | Automatically maintains ISO-8601 modification timestamp on application records. |
+| 6 | `trg_validate_center_allocation` | `public.examination_centers` | `BEFORE INSERT OR UPDATE` | `check_center_allocation_capacity()` | Prevents over-allocation: validates that the sum of seats allocated across all exams scheduled on the same date does not exceed the center's total physical capacity. |
+| 7 | `trg_validate_application_center_capacity` | `public.applications` | `BEFORE INSERT OR UPDATE` | `check_application_center_capacity()` | Enforces center quota limits: ensures candidate cannot be assigned to an exam center once the allocated capacity quota for that examination has been reached. |
 

@@ -4,9 +4,11 @@ import { Modal } from '../components/common/Modal';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { EmptyState } from '../components/common/EmptyState';
 import { Alert } from '../components/common/Alert';
-import { Building, Plus, Edit2, Trash2, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
+import { Building2, Plus, Edit2, Trash2, Link as LinkIcon } from 'lucide-react';
 
-export const AdminCenters = () => {
+export function AdminCenters() {
   const [centers, setCenters] = useState([]);
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export const AdminCenters = () => {
   const openAssignModal = (center) => {
     setAssignForm({
       center_id: center.center_id,
-      examination_id: exams.length > 0 ? exams[0].examination_id : '',
+      examination_id: exams.length > 0 ? (exams[0].examination_id || exams[0].id) : '',
       allocated_capacity: Math.min(400, center.total_capacity)
     });
     setAssignModalOpen(true);
@@ -134,23 +136,22 @@ export const AdminCenters = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Examination Center Venues</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Maintain authorized physical venues and manage M:N associations via the <code>examination_centers</code> junction table.
-          </p>
-        </div>
-        <button
-          onClick={openAddCenter}
-          className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Center Venue</span>
-        </button>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Examination Center Venues"
+        subtitle="Manage authorized test centers, venue capacities, and M:N junction associations"
+        crumbs={[{ label: 'Admin', to: '/admin/dashboard' }, { label: 'Exam Centers' }]}
+        actions={
+          <button
+            type="button"
+            onClick={openAddCenter}
+            className="gov-btn gov-btn-accent text-xs"
+          >
+            <Plus size={16} />
+            <span>Add Center Venue</span>
+          </button>
+        }
+      />
 
       {alert && (
         <Alert
@@ -160,190 +161,222 @@ export const AdminCenters = () => {
         />
       )}
 
-      {loading ? (
-        <LoadingSpinner message="Querying test centers..." />
-      ) : centers.length === 0 ? (
-        <EmptyState
-          title="No centers registered"
-          description="Add approved physical venues with seating capacities."
-          icon={Building}
-        />
-      ) : (
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
+      {/* Centers Table */}
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 size={18} />
+            <span>Accredited Examination Centers Directory</span>
+          </div>
+          <span className="text-xs text-slate-500 font-normal">
+            Total venues: <strong>{centers.length}</strong>
+          </span>
+        </div>
+
+        {loading ? (
+          <LoadingSpinner label="Querying test centers..." />
+        ) : centers.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title="No centers registered"
+              message="Add approved physical examination venues with seating capacities."
+              icon={Building2}
+              action={
+                <button
+                  type="button"
+                  onClick={openAddCenter}
+                  className="gov-btn gov-btn-primary text-xs"
+                >
+                  <Plus size={14} /> Add First Venue
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Center Code</th>
-                  <th className="px-6 py-3">Venue Name</th>
-                  <th className="px-6 py-3">Location (City, State)</th>
-                  <th className="px-6 py-3">Total Capacity</th>
-                  <th className="px-6 py-3">Contact</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
+                  <th>Center Code</th>
+                  <th>Venue Name & Campus</th>
+                  <th>Location (City, State)</th>
+                  <th>Total Capacity</th>
+                  <th>Contact</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody>
                 {centers.map((c) => (
-                  <tr key={c.center_id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-4 font-mono font-bold text-blue-950">
+                  <tr key={c.center_id}>
+                    <td className="whitespace-nowrap font-mono text-xs font-bold text-gov-900">
                       {c.center_code}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{c.center_name}</div>
+                    <td>
+                      <div className="font-semibold text-gov-800">{c.center_name}</div>
                       <div className="text-[11px] text-slate-500 truncate max-w-xs">{c.address}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="text-slate-600 text-xs">
                       {c.city}, {c.state} ({c.pincode})
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-800">
-                      {c.total_capacity.toLocaleString()} Seats
+                    <td className="font-bold text-gov-800 text-xs">
+                      {Number(c.total_capacity).toLocaleString()} Seats
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-mono">
+                    <td className="text-slate-600 font-mono text-xs">
                       {c.contact_number || '—'}
                     </td>
-                    <td className="px-6 py-4 text-right space-x-1.5">
-                      <button
-                        onClick={() => openAssignModal(c)}
-                        className="px-2.5 py-1 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded text-[11px] font-semibold border border-blue-200 inline-flex items-center space-x-1"
-                        title="Allocate to Examination"
-                      >
-                        <LinkIcon className="w-3 h-3" />
-                        <span>Allocate</span>
-                      </button>
-                      <button
-                        onClick={() => openEditCenter(c)}
-                        className="p-1.5 text-slate-700 hover:bg-slate-100 rounded"
-                        title="Edit Venue"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(c.center_id)}
-                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
-                        title="Delete Venue"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <td className="text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => openAssignModal(c)}
+                          className="gov-btn gov-btn-accent !py-1 !px-2 text-xs"
+                          title="Allocate to Examination"
+                        >
+                          <LinkIcon size={12} />
+                          <span>Allocate</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditCenter(c)}
+                          className="gov-btn gov-btn-outline !p-1.5 text-xs"
+                          title="Edit Venue"
+                          aria-label={`Edit ${c.center_code}`}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(c.center_id)}
+                          className="gov-btn gov-btn-danger !p-1.5 text-xs"
+                          title="Delete Venue"
+                          aria-label={`Delete ${c.center_code}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Modal: Add/Edit Center */}
       <Modal
-        isOpen={centerModalOpen}
+        open={centerModalOpen}
         onClose={() => setCenterModalOpen(false)}
         title={isEditing ? 'Modify Center Venue' : 'Create Examination Center Venue'}
       >
-        <form onSubmit={handleCenterSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleCenterSubmit} className="space-y-4 text-xs" noValidate>
+          <p className="text-xs text-slate-500 border-b border-line pb-2">Fields marked * are mandatory</p>
+
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Center Code *</label>
+            <FormField label="Center Code" htmlFor="cntr_code" required hint="e.g. DEL-KV-101">
               <input
+                id="cntr_code"
                 type="text"
                 required
                 value={centerForm.center_code}
                 onChange={(e) => setCenterForm({ ...centerForm, center_code: e.target.value })}
-                placeholder="e.g. DEL-KV-101"
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none uppercase font-mono"
+                placeholder="DEL-KV-101"
+                className="gov-input uppercase font-mono"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Total Venue Capacity *</label>
+            </FormField>
+
+            <FormField label="Total Venue Capacity" htmlFor="tot_cap" required>
               <input
+                id="tot_cap"
                 type="number"
                 required
                 min="1"
                 value={centerForm.total_capacity}
                 onChange={(e) => setCenterForm({ ...centerForm, total_capacity: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Center / Institution Name *</label>
+          <FormField label="Center / Institution Name" htmlFor="cntr_name" required>
             <input
+              id="cntr_name"
               type="text"
               required
               value={centerForm.center_name}
               onChange={(e) => setCenterForm({ ...centerForm, center_name: e.target.value })}
               placeholder="e.g. Government Arts and Science College"
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+              className="gov-input"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Postal Address *</label>
+          <FormField label="Postal Address" htmlFor="cntr_addr" required>
             <textarea
-              rows="2"
+              id="cntr_addr"
+              rows={2}
               required
               value={centerForm.address}
               onChange={(e) => setCenterForm({ ...centerForm, address: e.target.value })}
-              placeholder="Street address, campus landmarks"
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
-            ></textarea>
-          </div>
+              placeholder="Campus address, street, landmark"
+              className="gov-input"
+            />
+          </FormField>
 
           <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">City *</label>
+            <FormField label="City" htmlFor="cntr_city" required>
               <input
+                id="cntr_city"
                 type="text"
                 required
                 value={centerForm.city}
                 onChange={(e) => setCenterForm({ ...centerForm, city: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">State *</label>
+            </FormField>
+            <FormField label="State" htmlFor="cntr_state" required>
               <input
+                id="cntr_state"
                 type="text"
                 required
                 value={centerForm.state}
                 onChange={(e) => setCenterForm({ ...centerForm, state: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Pincode *</label>
+            </FormField>
+            <FormField label="Pincode" htmlFor="cntr_pin" required>
               <input
+                id="cntr_pin"
                 type="text"
                 required
                 value={centerForm.pincode}
                 onChange={(e) => setCenterForm({ ...centerForm, pincode: e.target.value })}
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                className="gov-input"
               />
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Contact Phone Number</label>
+          <FormField label="Contact Phone Number" htmlFor="cntr_phone">
             <input
+              id="cntr_phone"
               type="tel"
               value={centerForm.contact_number}
               onChange={(e) => setCenterForm({ ...centerForm, contact_number: e.target.value })}
-              placeholder="Landline / Admin office phone"
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+              placeholder="Official phone number"
+              className="gov-input"
             />
-          </div>
+          </FormField>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-end space-x-2">
+          <div className="pt-3 border-t border-line flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setCenterModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded text-xs hover:bg-slate-50"
+              className="gov-btn gov-btn-outline text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-900 text-white rounded font-semibold text-xs hover:bg-blue-800 shadow-sm"
+              className="gov-btn gov-btn-primary text-xs"
             >
               {isEditing ? 'Save Changes' : 'Register Venue'}
             </button>
@@ -353,56 +386,58 @@ export const AdminCenters = () => {
 
       {/* Modal: Associate Center with Examination (M:N Table) */}
       <Modal
-        isOpen={assignModalOpen}
+        open={assignModalOpen}
         onClose={() => setAssignModalOpen(false)}
         title="Associate Center with Examination (M:N Mapping)"
       >
-        <form onSubmit={handleAssignSubmit} className="space-y-4 text-xs">
-          <p className="text-slate-600">
-            This creates or updates a record in the junction table <code>examination_centers</code> with a composite primary key <code>(examination_id, center_id)</code>.
+        <form onSubmit={handleAssignSubmit} className="space-y-4 text-xs" noValidate>
+          <p className="text-slate-600 bg-slate-50 p-2.5 rounded border border-line">
+            This creates or updates a record in junction table <code className="font-mono text-gov-800">examination_centers</code> with composite primary key <code className="font-mono text-gov-800">(examination_id, center_id)</code>.
           </p>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Target Examination Notice *</label>
+          <FormField label="Target Examination Notice" htmlFor="asgn_exam" required>
             <select
+              id="asgn_exam"
               value={assignForm.examination_id}
               onChange={(e) => setAssignForm({ ...assignForm, examination_id: e.target.value })}
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white font-medium"
+              className="gov-input font-medium"
             >
               {exams.map((e) => (
-                <option key={e.examination_id} value={e.examination_id}>
+                <option key={e.examination_id || e.id} value={e.examination_id || e.id}>
                   {e.examination_code} - {e.examination_name}
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Allocated Capacity Quota (Seats) *</label>
+          <FormField
+            label="Allocated Capacity Quota (Seats)"
+            htmlFor="asgn_cap"
+            required
+            hint="Database trigger validate_center_allocation_capacity ensures allocated quota does not exceed venue capacity."
+          >
             <input
+              id="asgn_cap"
               type="number"
               required
               min="1"
               value={assignForm.allocated_capacity}
               onChange={(e) => setAssignForm({ ...assignForm, allocated_capacity: e.target.value })}
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+              className="gov-input"
             />
-            <p className="text-[11px] text-slate-500 mt-1">
-              Note: Database trigger <code>validate_center_allocation_capacity</code> will abort if quota exceeds venue capacity.
-            </p>
-          </div>
+          </FormField>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-end space-x-2">
+          <div className="pt-3 border-t border-line flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setAssignModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded text-xs hover:bg-slate-50"
+              className="gov-btn gov-btn-outline text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-900 text-white rounded font-semibold text-xs hover:bg-blue-800 shadow-sm"
+              className="gov-btn gov-btn-primary text-xs"
             >
               Confirm Allocation
             </button>
@@ -411,7 +446,6 @@ export const AdminCenters = () => {
       </Modal>
     </div>
   );
-};
+}
 
 export default AdminCenters;
-

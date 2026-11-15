@@ -3,7 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import AdminRoute from './AdminRoute';
-import DashboardLayout from '../components/layout/DashboardLayout';
+import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { PublicLayout } from '../components/layout/PublicLayout';
 
 // Public Pages
 import Home from '../pages/Home';
@@ -41,13 +42,16 @@ const DashboardRedirect = () => {
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Pages */}
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/examinations" element={<Examinations />} />
-      <Route path="/examinations/:id" element={<ExamDetails />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      {/* Public Pages wrapped in PublicLayout */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/examinations" element={<Examinations />} />
+        <Route path="/examinations/:id" element={<ExamDetails />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
 
       {/* Intelligent Unified /dashboard Redirection */}
       <Route path="/dashboard" element={<DashboardRedirect />} />
@@ -78,12 +82,8 @@ export const AppRoutes = () => {
           <Route path="/admin/results" element={<AdminResults />} />
         </Route>
       </Route>
-
-      {/* 404 Not Found Page */}
-      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
 
 export default AppRoutes;
-

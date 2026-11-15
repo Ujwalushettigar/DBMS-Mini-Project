@@ -5,9 +5,10 @@ import { formatDate, formatCurrency } from '../utils/helpers';
 import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { EmptyState } from '../components/common/EmptyState';
-import { Search, Filter, Layers, Calendar, DollarSign, Users, ArrowRight } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
+import { Search, Filter, Layers, Calendar, IndianRupee, Users, ArrowRight } from 'lucide-react';
 
-export const Examinations = () => {
+export function Examinations() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -33,37 +34,32 @@ export const Examinations = () => {
 
   const filteredExams = exams.filter((e) => {
     const q = search.toLowerCase();
-    const matchSearch =
-      !search ||
-      e.examination_name?.toLowerCase().includes(q) ||
-      e.examination_code?.toLowerCase().includes(q) ||
-      e.conducting_authority?.toLowerCase().includes(q);
-    return matchSearch;
+    const name = (e.examination_name || e.exam_name || '').toLowerCase();
+    const code = (e.examination_code || e.exam_code || '').toLowerCase();
+    const auth = (e.conducting_authority || '').toLowerCase();
+    return !search || name.includes(q) || code.includes(q) || auth.includes(q);
   });
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Title & Filter Header */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Government Recruitment Examinations
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Browse public examination notifications, check eligibility criteria, deadlines, and apply online.
-          </p>
-        </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Recruitment Examination Notifications"
+        subtitle="Browse official notifications, review qualification criteria, and apply online"
+        crumbs={[{ label: 'Examinations' }]}
+      />
 
-        {/* Search & Filter Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+      {/* Filter and Search Bar */}
+      <section className="gov-card p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 relative">
             <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by examination title, code (e.g. SSC-CGL), or authority..."
+              placeholder="Search by examination title, code (e.g. CGL-2026), or authority..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-blue-900 focus:border-blue-900 outline-none"
+              className="gov-input !pl-9"
+              aria-label="Search examinations"
             />
           </div>
 
@@ -72,69 +68,77 @@ export const Examinations = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-blue-900 focus:border-blue-900 outline-none bg-white"
+              className="gov-input !pl-9"
+              aria-label="Filter by examination status"
             >
               <option value="">All Statuses</option>
-              <option value="published">Published (Open)</option>
+              <option value="published">Published / Open</option>
               <option value="closed">Closed</option>
               <option value="completed">Completed</option>
             </select>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Examinations Table / Cards */}
+      {/* Examinations List */}
       {loading ? (
-        <LoadingSpinner message="Retrieving examination notifications from database..." />
+        <LoadingSpinner label="Retrieving examination notifications..." />
       ) : filteredExams.length === 0 ? (
-        <EmptyState
-          title="No examinations found"
-          description="Try adjusting your search criteria or status filter."
-          icon={Layers}
-        />
+        <div className="gov-card">
+          <EmptyState
+            title="No examinations found"
+            message="There are no examination notices matching your filter or search criteria."
+            icon={Layers}
+          />
+        </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            {filteredExams.map((exam) => (
-              <div
-                key={exam.examination_id}
-                className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-6"
+          {filteredExams.map((exam) => {
+            const id = exam.examination_id || exam.id;
+            const code = exam.examination_code || exam.exam_code;
+            const name = exam.examination_name || exam.exam_name;
+            const status = exam.examination_status || exam.status || 'published';
+
+            return (
+              <article
+                key={id || code}
+                className="gov-card p-5 transition hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6"
               >
                 <div className="space-y-2 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-blue-900 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded">
-                      {exam.examination_code}
+                    <span className="font-mono text-xs font-bold text-gov-800 px-2 py-0.5 bg-gov-50 border border-line rounded">
+                      {code}
                     </span>
-                    <Badge>{exam.examination_status}</Badge>
+                    <Badge>{status}</Badge>
                     <span className="text-xs text-slate-500 font-medium">
-                      • {exam.conducting_authority}
+                      • {exam.conducting_authority || 'Central Recruitment Commission'}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-slate-900 hover:text-blue-900 transition">
-                    <Link to={`/examinations/${exam.examination_id}`}>{exam.examination_name}</Link>
-                  </h3>
+                  <h2 className="text-lg font-bold text-gov-800 hover:text-gov-600 transition">
+                    <Link to={`/examinations/${id}`}>{name}</Link>
+                  </h2>
 
                   <p className="text-xs text-slate-600 line-clamp-2 max-w-3xl">
-                    {exam.description || 'No description provided.'}
+                    {exam.description || 'Public recruitment examination for administrative and executive cadres.'}
                   </p>
 
-                  {/* Badges / Metrics bar */}
-                  <div className="flex flex-wrap gap-4 pt-2 text-xs text-slate-600">
-                    <div className="flex items-center space-x-1">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Vacancies: <strong>{exam.total_vacancies.toLocaleString()}</strong></span>
+                  {/* Metrics bar */}
+                  <div className="flex flex-wrap gap-4 pt-2 text-xs text-slate-600 border-t border-line/60">
+                    <div className="flex items-center gap-1.5">
+                      <Users size={14} className="text-slate-400" />
+                      <span>Vacancies: <strong>{exam.total_vacancies !== undefined ? Number(exam.total_vacancies).toLocaleString() : '—'}</strong></span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Application Deadline: <strong>{formatDate(exam.application_end_date)}</strong></span>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={14} className="text-slate-400" />
+                      <span>Apply Deadline: <strong>{formatDate(exam.application_end_date)}</strong></span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={14} className="text-slate-400" />
                       <span>Exam Date: <strong>{formatDate(exam.examination_date)}</strong></span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <DollarSign className="w-3.5 h-3.5 text-slate-400" />
+                    <div className="flex items-center gap-1.5">
+                      <IndianRupee size={14} className="text-slate-400" />
                       <span>Fee: <strong>{formatCurrency(exam.application_fee)}</strong></span>
                     </div>
                   </div>
@@ -143,21 +147,20 @@ export const Examinations = () => {
                 {/* Right Action Button */}
                 <div className="flex-shrink-0 flex items-center">
                   <Link
-                    to={`/examinations/${exam.examination_id}`}
-                    className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-md text-xs font-semibold text-white bg-blue-900 hover:bg-blue-800 shadow-sm transition"
+                    to={`/examinations/${id}`}
+                    className="gov-btn gov-btn-primary"
                   >
-                    <span>View Details</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>View Notice</span>
+                    <ArrowRight size={14} />
                   </Link>
                 </div>
-              </div>
-            ))}
-          </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
   );
-};
+}
 
 export default Examinations;
-

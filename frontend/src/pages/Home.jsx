@@ -1,213 +1,201 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { UserPlus, IdCard, FileSignature, Ticket, ShieldCheck, ChevronRight } from 'lucide-react';
 import { examAPI } from '../services/api';
-import { formatDate, formatCurrency } from '../utils/helpers';
+import { NewsTicker } from '../components/layout/NewsTicker';
 import { Badge } from '../components/common/Badge';
-import {
-  Building2,
-  FileText,
-  CreditCard,
-  Award,
-  CheckCircle2,
-  Calendar,
-  Users,
-  ArrowRight,
-  ShieldCheck,
-  AlertCircle
-} from 'lucide-react';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
+import { formatDate } from '../utils/helpers';
+import { heroImage } from '../data/imageCredits';
 
-export const Home = () => {
+const services = [
+  { icon: UserPlus, title: 'Create Account & Login', text: 'Register with a valid email address and secure your candidate account.', to: '/register', cta: 'Register / Login' },
+  { icon: IdCard, title: 'Candidate Profile', text: 'Fill in personal details and educational qualifications once.', to: '/candidate/profile', cta: 'Open Profile' },
+  { icon: FileSignature, title: 'Apply for Examination', text: 'Check eligibility and apply online for open recruitment examinations.', to: '/examinations', cta: 'View Examinations' },
+  { icon: Ticket, title: 'Admit Card & Results', text: 'Download your admit card and view published scorecards.', to: '/candidate/admit-cards', cta: 'Candidate Services' },
+];
+
+const steps = [
+  'Create your account and verify your email',
+  'Complete your profile and add qualifications',
+  'Select an examination and submit the application',
+  'Download admit card and check the result',
+];
+
+const instructions = [
+  'Applications are accepted online only.',
+  'Keep your email address and mobile number active.',
+  'Fill your profile carefully; changes after submission may be restricted.',
+  'Apply before the last date shown against each examination.',
+  'Download and carry the admit card on the examination day.',
+  'Results are visible only after the administrator publishes them.',
+];
+
+function statusOf(exam) {
+  const now = new Date();
+  if (now < new Date(exam.application_start_date)) return { label: 'Upcoming', variant: 'info' };
+  if (now > new Date(exam.application_end_date)) return { label: 'Closed', variant: 'danger' };
+  return { label: 'Open', variant: 'success' };
+}
+
+export function Home() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchExams = async () => {
-      try {
-        const res = await examAPI.getAll({ status: 'published' });
-        if (res.success && res.data) {
-          setExams(res.data.slice(0, 3));
-        }
-      } catch (err) {
-        console.warn('Notice loading exams:', err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchExams();
+    let alive = true;
+    examAPI.getAll()
+      .then((res) => {
+        const rows = res?.data ?? res ?? [];
+        if (alive) setExams(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (alive) setExams([]);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => { alive = false; };
   }, []);
 
+  const tickerItems = exams.slice(0, 6).map((e) => `${e.examination_name || e.exam_name} - Last date to apply: ${formatDate(e.application_end_date)}`);
+
   return (
-    <div className="space-y-12 pb-12">
+    <div className="space-y-6">
+      <NewsTicker items={tickerItems.length ? tickerItems : ['Recruitment notifications updated daily. Review eligibility criteria before applying.']} />
+
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-xl p-8 sm:p-12 shadow-md border border-slate-800 relative overflow-hidden">
-        <div className="max-w-3xl space-y-4 relative z-10">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-900/60 border border-blue-700/60 text-xs font-semibold uppercase tracking-wider text-blue-200">
-            <ShieldCheck className="w-4 h-4 text-amber-400" />
-            <span>Public Sector Recruitment Commission Portal</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            Centralized Government Recruitment Examination Management System
-          </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Welcome to the official portal for competitive government recruitment examinations. Browse active notifications, register candidate profiles, apply online, download admit cards, and track declared merit results.
+      <section className="relative isolate overflow-hidden rounded shadow-card">
+        <img
+          src="/images/hero/hero-1280.jpg"
+          srcSet={heroImage.widths.map((w) => `/images/hero/hero-${w}.jpg ${w}w`).join(', ')}
+          sizes="(min-width: 1280px) 1280px, 100vw"
+          width={1920}
+          height={Math.round(1920 / heroImage.ratio)}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-center"
+        />
+        {/* Navy overlay keeps white text at WCAG AA contrast over any photo */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-gov-900/90 via-gov-800/75 to-gov-700/40" aria-hidden="true" />
+
+        <div className="px-6 py-12 pb-14 text-white sm:py-16 lg:py-20">
+          <h1 className="max-w-2xl text-2xl font-bold !text-white sm:text-4xl">Online Application Portal</h1>
+          <p className="mt-3 max-w-2xl text-sm text-gov-100 sm:text-base">
+            Apply for government recruitment examinations, track your application and download your admit card from one place.
           </p>
-          <div className="pt-2 flex flex-wrap gap-3">
-            <Link
-              to="/examinations"
-              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-md text-sm font-semibold text-white bg-blue-700 hover:bg-blue-600 shadow-sm transition"
-            >
-              <span>View Open Examinations</span>
-              <ArrowRight className="w-4 h-4" />
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link to="/login" className="gov-btn gov-btn-accent">Login</Link>
+            <Link to="/register" className="gov-btn bg-white text-gov-800 hover:bg-gov-50">New Registration</Link>
+          </div>
+        </div>
+
+        <p className="absolute bottom-1 right-2 max-w-[90%] rounded bg-black/50 px-2 py-0.5 text-right text-[10px] leading-tight text-white/90">
+          Photo: {heroImage.author} /{' '}
+          <a className="underline" href={heroImage.sourceUrl} target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>,{' '}
+          <a className="underline" href={heroImage.licenseUrl} target="_blank" rel="noopener noreferrer">{heroImage.license}</a>
+        </p>
+      </section>
+
+      {/* 4 Service Cards */}
+      <section aria-label="Services" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {services.map(({ icon: Icon, title, text, to, cta }) => (
+          <article key={title} className="gov-card flex flex-col border-t-4 border-gov-700 p-4 transition hover:shadow-lg">
+            <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gov-50 text-gov-700">
+              <Icon size={24} />
+            </span>
+            <h2 className="text-base font-bold text-gov-800">{title}</h2>
+            <p className="mt-1 flex-1 text-sm text-slate-600">{text}</p>
+            <Link to={to} className="gov-link mt-3 inline-flex items-center gap-1 text-sm font-semibold">
+              {cta} <ChevronRight size={14} />
             </Link>
-            <Link
-              to="/register"
-              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-md text-sm font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
-            >
-              <span>Candidate Registration</span>
-            </Link>
-          </div>
-        </div>
+          </article>
+        ))}
       </section>
 
-      {/* Latest Announcements Banner */}
-      <section className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start space-x-3 text-amber-900 shadow-sm">
-        <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
-        <div className="text-xs sm:text-sm">
-          <span className="font-bold uppercase tracking-wider mr-2 text-amber-800">Important Notice:</span>
-          Applications are open for SSC-CGL-2026 and UPSC-CSE-2026 examinations. Ensure your educational qualifications are updated in your candidate profile before submitting applications.
-        </div>
-      </section>
+      {/* Notices & Instructions */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section className="lg:col-span-2">
+          <h2 className="gov-section-title">Latest Examination Notices</h2>
+          {loading ? (
+            <LoadingSpinner label="Loading examination notices..." />
+          ) : exams.length === 0 ? (
+            <div className="gov-card">
+              <EmptyState title="No examination notices published yet" message="Check back later for newly announced examinations." />
+            </div>
+          ) : (
+            <div className="gov-table-wrap">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Examination</th>
+                    <th>Authority</th>
+                    <th>Last Date</th>
+                    <th>Vacancies</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exams.map((e) => {
+                    const s = statusOf(e);
+                    const code = e.examination_code || e.exam_code;
+                    const name = e.examination_name || e.exam_name;
+                    return (
+                      <tr key={e.examination_id || e.id || code}>
+                        <td className="whitespace-nowrap font-mono text-xs">{code}</td>
+                        <td className="font-medium">
+                          <Link to={`/examinations/${e.examination_id || e.id}`} className="gov-link">
+                            {name}
+                          </Link>
+                        </td>
+                        <td>{e.conducting_authority || 'Central Recruitment Commission'}</td>
+                        <td className="whitespace-nowrap">{formatDate(e.application_end_date)}</td>
+                        <td>{e.total_vacancies ?? '—'}</td>
+                        <td><Badge variant={s.variant}>{s.label}</Badge></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
-      {/* Featured / Active Examinations Grid */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Active Recruitment Notices</h2>
-            <p className="text-xs text-slate-500">Recently published government examination advertisements</p>
+        <aside className="space-y-4">
+          <div className="gov-card">
+            <h2 className="gov-card-header !text-base"><ShieldCheck size={18} /> Important Instructions</h2>
+            <ul className="list-disc space-y-1.5 px-8 py-4 text-sm text-slate-700">
+              {instructions.map((i) => <li key={i}>{i}</li>)}
+            </ul>
           </div>
-          <Link
-            to="/examinations"
-            className="text-xs font-semibold text-blue-900 hover:text-blue-700 flex items-center space-x-1"
-          >
-            <span>All Examinations</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="py-8 text-center text-sm text-slate-500">Loading open examinations...</div>
-        ) : exams.length === 0 ? (
-          <div className="text-center py-8 bg-white border border-slate-200 rounded-lg text-slate-500 text-sm">
-            No examinations currently open for online application.
+          <div className="gov-card border-l-4 border-saffron-500 p-4 text-sm">
+            <h2 className="mb-1 text-base font-bold text-gov-800">Help Desk</h2>
+            <p className="text-slate-700">helpdesk@grems.example</p>
+            <p className="text-slate-700">1800-000-0000 (demo number)</p>
+            <p className="text-slate-500 text-xs mt-1">Mon-Fri, 10:00 AM - 5:00 PM</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {exams.map((exam) => (
-              <div
-                key={exam.examination_id}
-                className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-blue-900 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded">
-                      {exam.examination_code}
-                    </span>
-                    <Badge>{exam.examination_status}</Badge>
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">
-                    {exam.examination_name}
-                  </h3>
-                  <p className="text-xs text-slate-500 line-clamp-2">
-                    {exam.conducting_authority}
-                  </p>
-                  <div className="pt-2 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Total Vacancies:</span>
-                      <span className="font-semibold text-slate-800">{exam.total_vacancies.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Application Fee:</span>
-                      <span className="font-semibold text-slate-800">{formatCurrency(exam.application_fee)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Closing Date:</span>
-                      <span className="font-semibold text-slate-800">{formatDate(exam.application_end_date)}</span>
-                    </div>
-                  </div>
-                </div>
+        </aside>
+      </div>
 
-                <div className="mt-5 pt-3 border-t border-slate-100">
-                  <Link
-                    to={`/examinations/${exam.examination_id}`}
-                    className="w-full text-center block px-3 py-2 rounded bg-slate-100 hover:bg-blue-900 hover:text-white text-xs font-semibold text-slate-700 transition"
-                  >
-                    View Details & Eligibility
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* End-to-End Application Workflow */}
-      <section className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Application & Selection Lifecycle</h2>
-          <p className="text-xs text-slate-500">Step-by-step procedure for candidates applying through GREMS</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs">1</div>
-            <h4 className="font-semibold text-sm text-slate-800">Register Account</h4>
-            <p className="text-xs text-slate-500">Sign up and create your verified candidate demographic profile.</p>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs">2</div>
-            <h4 className="font-semibold text-sm text-slate-800">Add Qualifications</h4>
-            <p className="text-xs text-slate-500">Record your SSLC, PUC, Degree, and Diploma academic records.</p>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs">3</div>
-            <h4 className="font-semibold text-sm text-slate-800">Apply Online</h4>
-            <p className="text-xs text-slate-500">Select published notices and choose your preferred examination center venue.</p>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs">4</div>
-            <h4 className="font-semibold text-sm text-slate-800">Admit Card</h4>
-            <p className="text-xs text-slate-500">Download and print your official hall ticket with allocated roll number.</p>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200/80 space-y-2">
-            <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs">5</div>
-            <h4 className="font-semibold text-sm text-slate-800">Check Results</h4>
-            <p className="text-xs text-slate-500">Access published marks, national/state percentile, and selection rank.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Academic Highlights Banner */}
-      <section className="bg-slate-900 text-slate-300 rounded-lg p-6 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <h3 className="text-white font-bold text-sm">Academic DBMS Project Implementation</h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Powered by 9 normalized relational tables (3NF), composite keys, triggers, constraints, and PostgreSQL on Supabase.
-          </p>
-        </div>
-        <Link
-          to="/about"
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-semibold border border-slate-700 whitespace-nowrap transition"
-        >
-          View System Architecture
-        </Link>
+      {/* How to Apply */}
+      <section aria-label="How to apply">
+        <h2 className="gov-section-title">How to Apply</h2>
+        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s, i) => (
+            <li key={s} className="gov-card flex items-start gap-3 p-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-saffron-500 font-bold text-white">
+                {i + 1}
+              </span>
+              <span className="text-sm text-slate-700">{s}</span>
+            </li>
+          ))}
+        </ol>
       </section>
     </div>
   );
-};
+}
 
 export default Home;
-

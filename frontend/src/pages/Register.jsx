@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Building2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Info } from 'lucide-react';
+import { Alert } from '../components/common/Alert';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
 
-export const Register = () => {
+export function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -61,131 +64,136 @@ export const Register = () => {
       });
       navigate('/candidate/dashboard');
     } catch (err) {
-      setError(err.message || 'Registration failed. Please check your information.');
+      setError(err?.response?.data?.message || err?.message || 'Registration failed. Please check your information.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4">
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 space-y-6">
-        <div className="text-center space-y-1">
-          <div className="w-10 h-10 rounded bg-blue-900 text-white flex items-center justify-center mx-auto shadow-sm">
-            <Building2 className="w-5 h-5" />
-          </div>
-          <h1 className="text-xl font-bold text-slate-900">New Candidate Registration</h1>
-          <p className="text-xs text-slate-500">
-            Create an official candidate profile for public recruitment examinations
-          </p>
+    <div className="space-y-6">
+      <PageHeader
+        title="New Candidate Registration"
+        subtitle="One-time registration for online government recruitment examinations"
+        crumbs={[{ label: 'Register' }]}
+      />
+
+      <div className="gov-card max-w-3xl mx-auto">
+        <div className="gov-card-header">
+          <UserPlus size={20} />
+          <span>Candidate Registration Form</span>
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start space-x-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6" noValidate>
+          <div className="flex items-center justify-between border-b border-line pb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Fields marked * are mandatory
+            </span>
+            <span className="text-xs text-slate-500">
+              Already registered? <Link to="/login" className="gov-link font-semibold">Sign In</Link>
+            </span>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-5 text-xs">
-          {/* Section: Account Credentials */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
-              1. Account Information
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email Address *</label>
+          {error && <Alert type="error">{error}</Alert>}
+
+          {/* Section 1: Account Information */}
+          <div className="space-y-4">
+            <h2 className="gov-section-title">1. Account Credentials</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField label="Email Address" htmlFor="email" required>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   required
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="aspirant@example.com"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  className="gov-input"
                 />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Password *</label>
+              </FormField>
+
+              <FormField label="Password" htmlFor="password" required hint="At least 6 characters">
                 <input
+                  id="password"
                   type="password"
                   name="password"
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Min 6 characters"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="••••••••"
+                  className="gov-input"
                 />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Confirm Password *</label>
+              </FormField>
+
+              <FormField label="Confirm Password" htmlFor="confirm_password" required>
                 <input
+                  id="confirm_password"
                   type="password"
                   name="confirm_password"
                   required
                   value={formData.confirm_password}
                   onChange={handleChange}
-                  placeholder="Repeat password"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="••••••••"
+                  className="gov-input"
                 />
-              </div>
+              </FormField>
             </div>
           </div>
 
-          {/* Section: Personal Dossier */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
-              2. Personal & Demographic Details
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Full Legal Name *</label>
+          {/* Section 2: Personal Dossier */}
+          <div className="space-y-4">
+            <h2 className="gov-section-title">2. Personal & Demographic Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField label="Full Legal Name" htmlFor="full_name" required hint="As per Matriculation Certificate">
                 <input
+                  id="full_name"
                   type="text"
                   name="full_name"
                   required
                   value={formData.full_name}
                   onChange={handleChange}
-                  placeholder="As per matriculation cert"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="Enter full name"
+                  className="gov-input"
                 />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Date of Birth *</label>
+              </FormField>
+
+              <FormField label="Date of Birth" htmlFor="date_of_birth" required>
                 <input
+                  id="date_of_birth"
                   type="date"
                   name="date_of_birth"
                   required
                   value={formData.date_of_birth}
                   onChange={handleChange}
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  className="gov-input"
                 />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Gender *</label>
+              </FormField>
+
+              <FormField label="Gender" htmlFor="gender" required>
                 <select
+                  id="gender"
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white"
+                  className="gov-input"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
                   <option value="Prefer not to say">Prefer not to say</option>
                 </select>
-              </div>
+              </FormField>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Category / Quota *</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Social Category / Quota" htmlFor="category" required>
                 <select
+                  id="category"
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white"
+                  className="gov-input"
                 >
                   <option value="General">General</option>
                   <option value="OBC">OBC (Other Backward Classes)</option>
@@ -193,77 +201,78 @@ export const Register = () => {
                   <option value="ST">ST (Scheduled Tribe)</option>
                   <option value="EWS">EWS (Economically Weaker Section)</option>
                 </select>
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Mobile Phone Number *</label>
+              </FormField>
+
+              <FormField label="Mobile Phone Number" htmlFor="phone_number" required hint="10-digit mobile number">
                 <input
+                  id="phone_number"
                   type="tel"
                   name="phone_number"
                   required
                   value={formData.phone_number}
                   onChange={handleChange}
-                  placeholder="10 digit mobile number"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="9876543210"
+                  className="gov-input"
                 />
-              </div>
+              </FormField>
             </div>
           </div>
 
-          {/* Section: Address Details */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
-              3. Permanent Address
-            </h3>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Address Line *</label>
+          {/* Section 3: Address */}
+          <div className="space-y-4">
+            <h2 className="gov-section-title">3. Permanent Residential Address</h2>
+            <FormField label="Address Line" htmlFor="address" required>
               <textarea
+                id="address"
                 name="address"
                 required
-                rows="2"
+                rows={2}
                 value={formData.address}
                 onChange={handleChange}
-                placeholder="House / Flat no, Street, Locality"
-                className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
-              ></textarea>
-            </div>
+                placeholder="House / Flat No., Street, Locality"
+                className="gov-input"
+              />
+            </FormField>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">City *</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField label="City / District" htmlFor="city" required>
                 <input
+                  id="city"
                   type="text"
                   name="city"
                   required
                   value={formData.city}
                   onChange={handleChange}
-                  placeholder="City"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="Enter city"
+                  className="gov-input"
                 />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">State *</label>
+              </FormField>
+
+              <FormField label="State / UT" htmlFor="state" required>
                 <input
+                  id="state"
                   type="text"
                   name="state"
                   required
                   value={formData.state}
                   onChange={handleChange}
-                  placeholder="State"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="Enter state"
+                  className="gov-input"
                 />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Pincode *</label>
+              </FormField>
+
+              <FormField label="Postal Pincode" htmlFor="pincode" required>
                 <input
+                  id="pincode"
                   type="text"
                   name="pincode"
                   required
                   value={formData.pincode}
                   onChange={handleChange}
-                  placeholder="6 digit PIN"
-                  className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none"
+                  placeholder="6-digit PIN"
+                  className="gov-input"
                 />
-              </div>
+              </FormField>
             </div>
           </div>
 
@@ -271,23 +280,15 @@ export const Register = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded shadow-sm text-xs transition disabled:opacity-50"
+              className="gov-btn gov-btn-primary w-full"
             >
               {loading ? 'Submitting Registration...' : 'Complete Registration'}
             </button>
           </div>
         </form>
-
-        <div className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100">
-          Already registered?{' '}
-          <Link to="/login" className="text-blue-900 font-semibold hover:underline">
-            Sign In here
-          </Link>
-        </div>
       </div>
     </div>
   );
-};
+}
 
 export default Register;
-

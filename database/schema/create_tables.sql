@@ -141,8 +141,10 @@ CREATE TABLE IF NOT EXISTS public.results (
         ON DELETE CASCADE,
     marks_obtained NUMERIC(7,2) NOT NULL,
     maximum_marks NUMERIC(7,2) NOT NULL,
+    percentage NUMERIC(5,2) GENERATED ALWAYS AS (ROUND((marks_obtained / NULLIF(maximum_marks, 0)) * 100, 2)) STORED,
     rank INTEGER,
     result_status VARCHAR(20) NOT NULL,
+    is_published BOOLEAN DEFAULT FALSE,
     published_at TIMESTAMPTZ,
     remarks TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -547,3 +549,222 @@ CREATE TABLE IF NOT EXISTS public.exams_q3_2026 PARTITION OF public.examination_
 
 CREATE TABLE IF NOT EXISTS public.exams_q4_2026 PARTITION OF public.examination_archives_partitioned
     FOR VALUES FROM ('2026-10-01') TO ('2027-01-01');
+
+-- ============================================================================
+-- 9. SCHEMA ALTERATIONS & COMPUTED COLUMNS (results)
+-- Purpose: Ensures backward compatibility and schema alignment for results table.
+-- ============================================================================
+ALTER TABLE public.results 
+    ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT FALSE;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'results' 
+          AND column_name = 'percentage'
+    ) THEN
+        ALTER TABLE public.results 
+            ADD COLUMN percentage NUMERIC(5,2) GENERATED ALWAYS AS (
+                ROUND((marks_obtained / NULLIF(maximum_marks, 0)) * 100, 2)
+            ) STORED;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_results_is_published ON public.results(is_published);
+CREATE INDEX IF NOT EXISTS idx_results_published_at ON public.results(published_at);
+
+-- ============================================================================
+-- 10. ALIGNED DOMAIN CHECK CONSTRAINTS
+-- Purpose: Strict domain validation constraints matching application runtime values.
+-- ============================================================================
+
+-- Table: applications
+ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS chk_application_status;
+ALTER TABLE public.applications ADD CONSTRAINT chk_application_status 
+    CHECK (application_status IN ('submitted', 'under_review', 'accepted', 'approved', 'rejected', 'withdrawn'));
+
+ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS chk_payment_status;
+ALTER TABLE public.applications ADD CONSTRAINT chk_payment_status 
+    CHECK (payment_status IN ('pending', 'paid', 'failed', 'waived'));
+
+-- Table: examinations
+ALTER TABLE public.examinations DROP CONSTRAINT IF EXISTS chk_examination_status;
+ALTER TABLE public.examinations ADD CONSTRAINT chk_examination_status 
+    CHECK (examination_status IN ('draft', 'upcoming', 'open', 'published', 'closed', 'completed', 'cancelled'));
+
+-- Table: results
+ALTER TABLE public.results DROP CONSTRAINT IF EXISTS chk_result_status;
+ALTER TABLE public.results ADD CONSTRAINT chk_result_status 
+    CHECK (result_status IN ('pass', 'fail', 'withheld', 'absent', 'pending', 'qualified', 'not_qualified'));
+
+ALTER TABLE public.results DROP CONSTRAINT IF EXISTS chk_marks_range;
+ALTER TABLE public.results ADD CONSTRAINT chk_marks_range 
+    CHECK (marks_obtained >= 0 AND marks_obtained <= maximum_marks);
+
+-- Table: educational_qualifications
+ALTER TABLE public.educational_qualifications DROP CONSTRAINT IF EXISTS chk_qualification_level;
+ALTER TABLE public.educational_qualifications ADD CONSTRAINT chk_qualification_level 
+    CHECK (qualification_level IN ('SSLC', 'PUC', 'Diploma', 'Undergraduate', 'Postgraduate', 'Doctorate', 'B.E.', 'Other', '10th', '12th', 'diploma', 'bachelors', 'masters', 'doctorate'));
+
+-- ============================================================================
+-- 11. VENUE & ALLOCATION CAPACITY VALIDATION TRIGGERS
+-- Purpose: Enforces physical center capacity constraints at the database level.
+-- ============================================================================
+
+-- Trigger 1: Center Capacity vs. Exam Allocation
+-- Ensures the sum of seats allocated across all exams scheduled on the same date
+-- cannot exceed the total physical capacity of that examination center.
+CREATE OR REPLACE FUNCTION public.check_center_allocation_capacity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_exam_date DATE;
+    v_total_capacity INTEGER;
+    v_allocated_sum INTEGER;
+BEGIN
+    SELECT examination_date INTO v_exam_date
+    FROM public.examinations
+    WHERE examination_id = NEW.examination_id;
+
+    SELECT total_capacity INTO v_total_capacity
+    FROM public.exam_centers
+    WHERE center_id = NEW.center_id;
+
+    IF v_total_capacity IS NULL THEN
+        RAISE EXCEPTION 'Target examination center % does not exist.', NEW.center_id;
+    END IF;
+
+    -- Aggregate all seats allocated for this center across all exams on this specific examination date
+    SELECT COALESCE(SUM(ec.allocated_capacity), 0) INTO v_allocated_sum
+    FROM public.examination_centers ec
+    JOIN public.examinations e ON ec.examination_id = e.examination_id
+    WHERE ec.center_id = NEW.center_id
+      AND e.examination_date = v_exam_date
+      AND (TG_OP = 'INSERT' OR ec.examination_id <> NEW.examination_id);
+
+    IF (v_allocated_sum + NEW.allocated_capacity) > v_total_capacity THEN
+        RAISE EXCEPTION 'Allocation exceeds center physical capacity! Center Capacity: %, Already Allocated on %: %, Attempted: %',
+            v_total_capacity, v_exam_date, v_allocated_sum, NEW.allocated_capacity;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_validate_center_allocation ON public.examination_centers;
+CREATE TRIGGER trg_validate_center_allocation
+BEFORE INSERT OR UPDATE ON public.examination_centers
+FOR EACH ROW EXECUTE FUNCTION public.check_center_allocation_capacity();
+
+-- Trigger 2: Center Allocation vs. Candidate Application Assignment
+-- Ensures candidates cannot be assigned to an exam center if that center's
+-- allocated capacity for that examination has been reached.
+CREATE OR REPLACE FUNCTION public.check_application_center_capacity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_allocated_capacity INTEGER;
+    v_assigned_count INTEGER;
+BEGIN
+    IF NEW.center_id IS NOT NULL AND (
+        TG_OP = 'INSERT' 
+        OR OLD.center_id IS NULL 
+        OR OLD.center_id <> NEW.center_id 
+        OR OLD.application_status <> NEW.application_status
+    ) THEN
+        -- Verify that the center is actually allocated to this exam
+        SELECT allocated_capacity INTO v_allocated_capacity
+        FROM public.examination_centers
+        WHERE examination_id = NEW.examination_id
+          AND center_id = NEW.center_id;
+
+        IF v_allocated_capacity IS NULL THEN
+            RAISE EXCEPTION 'Examination center % is not mapped or allocated for examination %.',
+                NEW.center_id, NEW.examination_id;
+        END IF;
+
+        -- Count existing active applications assigned to this center for this exam
+        SELECT COUNT(*) INTO v_assigned_count
+        FROM public.applications
+        WHERE examination_id = NEW.examination_id
+          AND center_id = NEW.center_id
+          AND application_status NOT IN ('rejected', 'withdrawn')
+          AND (TG_OP = 'INSERT' OR application_id <> NEW.application_id);
+
+        IF v_assigned_count >= v_allocated_capacity THEN
+            RAISE EXCEPTION 'Exam center allocated capacity of % candidates reached for this exam. Cannot assign more candidates.',
+                v_allocated_capacity;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_validate_application_center_capacity ON public.applications;
+CREATE TRIGGER trg_validate_application_center_capacity
+BEFORE INSERT OR UPDATE OF center_id, application_status ON public.applications
+FOR EACH ROW EXECUTE FUNCTION public.check_application_center_capacity();
+
+-- ============================================================================
+-- 12. ROW LEVEL SECURITY (RLS) POLICIES REINFORCEMENT
+-- Purpose: Tighten security guarantees for published results, application status
+--          updates, and draft examination isolation.
+-- ============================================================================
+
+-- 12.1 Results Policy: Candidates view ONLY published results; Admins view all
+DROP POLICY IF EXISTS "results_select_policy" ON public.results;
+CREATE POLICY "results_select_policy" ON public.results
+FOR SELECT TO authenticated
+USING (
+    public.is_admin() OR (
+        (is_published = TRUE OR published_at IS NOT NULL) AND
+        EXISTS (
+            SELECT 1 FROM public.applications a
+            JOIN public.candidates c ON a.candidate_id = c.candidate_id
+            WHERE a.application_id = results.application_id
+              AND c.user_id = auth.uid()
+        )
+    )
+);
+
+-- 12.2 Applications Policy: Candidates CANNOT self-approve applications
+DROP POLICY IF EXISTS "applications_update_policy" ON public.applications;
+CREATE POLICY "applications_update_policy" ON public.applications
+FOR UPDATE TO authenticated
+USING (
+    public.is_admin() OR (
+        EXISTS (
+            SELECT 1 FROM public.candidates c
+            WHERE c.candidate_id = applications.candidate_id
+              AND c.user_id = auth.uid()
+        )
+    )
+)
+WITH CHECK (
+    public.is_admin() OR (
+        EXISTS (
+            SELECT 1 FROM public.candidates c
+            WHERE c.candidate_id = applications.candidate_id
+              AND c.user_id = auth.uid()
+        )
+        -- Candidate updates are strictly restricted to submitted or withdrawn statuses
+        AND (application_status IN ('submitted', 'withdrawn'))
+    )
+);
+
+-- 12.3 Examinations Policy: Candidates view ONLY open/upcoming/published/completed exams
+DROP POLICY IF EXISTS "examinations_select_policy" ON public.examinations;
+CREATE POLICY "examinations_select_policy" ON public.examinations
+FOR SELECT TO authenticated
+USING (
+    public.is_admin() OR examination_status IN ('open', 'upcoming', 'published', 'completed')
+);

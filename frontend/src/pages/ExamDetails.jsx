@@ -4,20 +4,21 @@ import { examAPI } from '../services/api';
 import { formatDate, formatCurrency } from '../utils/helpers';
 import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { PageHeader } from '../components/common/PageHeader';
+import { Alert } from '../components/common/Alert';
 import { useAuth } from '../context/AuthContext';
 import {
   Calendar,
   Users,
-  DollarSign,
+  IndianRupee,
   Building,
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
-  FileText,
-  MapPin
+  FileText
 } from 'lucide-react';
 
-export const ExamDetails = () => {
+export function ExamDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, isCandidate } = useAuth();
@@ -32,7 +33,7 @@ export const ExamDetails = () => {
         if (res.success && res.data) {
           setExam(res.data);
         } else {
-          setError('Examination not found.');
+          setError('Examination notice not found.');
         }
       } catch (err) {
         setError(err.message || 'Error loading examination details.');
@@ -43,16 +44,23 @@ export const ExamDetails = () => {
     fetchExam();
   }, [id]);
 
-  if (loading) return <LoadingSpinner message="Loading examination specifications..." />;
+  if (loading) return <LoadingSpinner label="Loading examination specifications..." />;
+
   if (error || !exam) {
     return (
-      <div className="bg-white rounded-lg border border-slate-200 p-8 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
-        <h3 className="text-lg font-bold text-slate-800">Examination Notice Not Found</h3>
-        <p className="text-xs text-slate-500">{error || 'The requested examination record does not exist.'}</p>
-        <Link to="/examinations" className="inline-block px-4 py-2 bg-blue-900 text-white rounded text-xs font-semibold">
-          Back to Examinations
-        </Link>
+      <div className="space-y-6">
+        <PageHeader
+          title="Examination Notice"
+          crumbs={[{ label: 'Examinations', to: '/examinations' }, { label: 'Notice Details' }]}
+        />
+        <div className="gov-card p-8 text-center space-y-4">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+          <h2 className="text-lg font-bold text-gov-800">Examination Notice Not Found</h2>
+          <p className="text-xs text-slate-500">{error || 'The requested examination record does not exist.'}</p>
+          <Link to="/examinations" className="gov-btn gov-btn-outline inline-block">
+            Back to Examinations
+          </Link>
+        </div>
       </div>
     );
   }
@@ -63,132 +71,138 @@ export const ExamDetails = () => {
   const canApply = isPublished && isWithinDates;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      <Link to="/examinations" className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to all examinations</span>
-      </Link>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title={exam.examination_name}
+        subtitle={`Official Notification Ref: ${exam.examination_code} • ${exam.conducting_authority || 'Central Recruitment Commission'}`}
+        crumbs={[{ label: 'Examinations', to: '/examinations' }, { label: exam.examination_code }]}
+        actions={
+          <Link to="/examinations" className="gov-btn gov-btn-outline text-xs">
+            <ArrowLeft size={14} /> Back to Notices
+          </Link>
+        }
+      />
 
-      {/* Main Notice Card */}
-      <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
-        <div className="space-y-2 border-b border-slate-200 pb-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs font-bold text-blue-900 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded">
-              {exam.examination_code}
-            </span>
-            <Badge>{exam.examination_status}</Badge>
-            <span className="text-xs text-slate-500 font-medium">
-              • {exam.conducting_authority}
-            </span>
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <FileText size={18} />
+            <span>Examination Specifications & Schedule</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">{exam.examination_name}</h1>
-          <p className="text-xs text-slate-500">Conducted by: <strong>{exam.conducting_authority}</strong></p>
+          <Badge>{exam.examination_status}</Badge>
         </div>
 
-        {/* Vital Metadata Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-lg bg-slate-50 border border-slate-200/80 text-xs">
-          <div>
-            <span className="text-slate-400 block">Total Vacancies</span>
-            <span className="font-bold text-slate-800 text-sm mt-0.5 block">{exam.total_vacancies.toLocaleString()} Posts</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block">Application Fee</span>
-            <span className="font-bold text-slate-800 text-sm mt-0.5 block">{formatCurrency(exam.application_fee)}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block">Application Period</span>
-            <span className="font-bold text-slate-800 text-xs mt-0.5 block">
-              {formatDate(exam.application_start_date)} - {formatDate(exam.application_end_date)}
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400 block">Scheduled Exam Date</span>
-            <span className="font-bold text-blue-900 text-sm mt-0.5 block">{formatDate(exam.examination_date)}</span>
-          </div>
-        </div>
-
-        {/* Description & Eligibility */}
-        <div className="space-y-4 text-xs leading-relaxed text-slate-700">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider mb-1.5">Description</h3>
-            <p className="bg-slate-50 p-4 rounded border border-slate-200 text-slate-600">
-              {exam.description || 'No detailed scope provided.'}
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider mb-1.5">Eligibility Criteria</h3>
-            <div className="bg-slate-50 p-4 rounded border border-slate-200 text-slate-600 whitespace-pre-line">
-              {exam.eligibility_criteria || 'Candidates must satisfy general government educational standards.'}
+        <div className="p-6 space-y-6">
+          {/* Key Metric Blocks */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded bg-slate-50 border border-line text-xs">
+            <div>
+              <span className="text-slate-500 block uppercase font-medium">Total Vacancies</span>
+              <span className="font-bold text-gov-900 text-sm mt-0.5 block">
+                {exam.total_vacancies !== undefined ? Number(exam.total_vacancies).toLocaleString() : '—'} Posts
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500 block uppercase font-medium">Application Fee</span>
+              <span className="font-bold text-gov-900 text-sm mt-0.5 block">
+                {formatCurrency(exam.application_fee)}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500 block uppercase font-medium">Application Window</span>
+              <span className="font-bold text-gov-900 text-xs mt-0.5 block">
+                {formatDate(exam.application_start_date)} - {formatDate(exam.application_end_date)}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500 block uppercase font-medium">Scheduled Exam Date</span>
+              <span className="font-bold text-saffron-600 text-sm mt-0.5 block">
+                {formatDate(exam.examination_date)}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Allocated Examination Centers */}
-        <div className="space-y-3 pt-2">
-          <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">Designated Examination Centers</h3>
-          {(!exam.examination_centers || exam.examination_centers.length === 0) ? (
-            <p className="text-xs text-slate-500 italic">No specific exam centers allocated yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {exam.examination_centers.map((ec, idx) => (
-                <div key={idx} className="p-3 rounded border border-slate-200 bg-slate-50 text-xs space-y-1">
-                  <div className="font-bold text-slate-800 flex items-center space-x-1">
-                    <Building className="w-3.5 h-3.5 text-blue-900" />
-                    <span>{ec.exam_centers?.center_name || 'Designated Venue'}</span>
+          {/* Description & Eligibility */}
+          <div className="space-y-4 text-xs leading-relaxed text-slate-700">
+            <div>
+              <h3 className="gov-section-title !text-sm">Job Description & Scope</h3>
+              <p className="bg-slate-50 p-4 rounded border border-line text-slate-700">
+                {exam.description || 'Public recruitment examination for administrative and executive cadres.'}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="gov-section-title !text-sm">Prescribed Eligibility Criteria</h3>
+              <div className="bg-slate-50 p-4 rounded border border-line text-slate-700 whitespace-pre-line">
+                {exam.eligibility_criteria || 'Candidates must possess a Bachelor degree from a recognized university and be within the prescribed age limit on the closing date.'}
+              </div>
+            </div>
+          </div>
+
+          {/* Allocated Centers */}
+          <div className="space-y-3 pt-2">
+            <h3 className="gov-section-title !text-sm">Designated Examination Centers</h3>
+            {(!exam.examination_centers || exam.examination_centers.length === 0) ? (
+              <p className="text-xs text-slate-500 italic">No specific exam centers allocated to this notification yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {exam.examination_centers.map((ec, idx) => (
+                  <div key={idx} className="p-3 rounded border border-line bg-slate-50 text-xs space-y-1">
+                    <div className="font-bold text-gov-800 flex items-center space-x-1.5">
+                      <Building size={14} className="text-gov-700" />
+                      <span>{ec.exam_centers?.center_name || 'Designated Venue'}</span>
+                    </div>
+                    <p className="text-slate-600">{ec.exam_centers?.city}, {ec.exam_centers?.state}</p>
+                    <p className="text-[11px] text-slate-500">Allocated Quota: {ec.allocated_capacity} seats</p>
                   </div>
-                  <p className="text-slate-500">{ec.exam_centers?.city}, {ec.exam_centers?.state}</p>
-                  <p className="text-[11px] text-slate-400">Allocated Quota: {ec.allocated_capacity} seats</p>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Application Action Strip */}
+          <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-slate-600">
+              {canApply ? (
+                <span className="text-india-green font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 size={16} />
+                  <span>Online applications are currently open for this examination notice.</span>
+                </span>
+              ) : (
+                <span className="text-saffron-600 font-semibold flex items-center gap-1.5">
+                  <AlertCircle size={16} />
+                  <span>Application period is closed, upcoming, or notice is not published.</span>
+                </span>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Action Button Section */}
-        <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-slate-500">
-            {canApply ? (
-              <span className="text-emerald-700 font-semibold flex items-center space-x-1">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Online applications are actively being accepted for this examination.</span>
-              </span>
-            ) : (
-              <span className="text-amber-700 font-semibold flex items-center space-x-1">
-                <AlertCircle className="w-4 h-4" />
-                <span>Application period is currently closed or in draft status.</span>
-              </span>
-            )}
-          </div>
-
-          <div>
-            {!isAuthenticated ? (
-              <Link
-                to="/login"
-                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition inline-block text-center"
-              >
-                Sign In to Apply
-              </Link>
-            ) : isCandidate ? (
-              <Link
-                to={`/candidate/apply?exam_id=${exam.examination_id}`}
-                className={`px-6 py-2.5 rounded text-xs font-semibold shadow-sm transition inline-block text-center ${
-                  canApply
-                    ? 'bg-blue-900 hover:bg-blue-800 text-white'
-                    : 'bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none'
-                }`}
-              >
-                {canApply ? 'Apply Now' : 'Applications Closed'}
-              </Link>
-            ) : (
-              <span className="text-xs text-slate-500 italic">Logged in as Administrator</span>
-            )}
+            <div>
+              {!isAuthenticated ? (
+                <Link
+                  to="/login"
+                  className="gov-btn gov-btn-primary"
+                >
+                  Sign In to Apply
+                </Link>
+              ) : isCandidate ? (
+                <Link
+                  to={`/candidate/apply/${exam.examination_id || exam.id}`}
+                  className={`gov-btn ${
+                    canApply
+                      ? 'gov-btn-accent'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none'
+                  }`}
+                >
+                  {canApply ? 'Proceed to Apply' : 'Applications Closed'}
+                </Link>
+              ) : (
+                <span className="text-xs text-slate-500 italic">Signed in as Administrator</span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
-};
+}
 
 export default ExamDetails;
-

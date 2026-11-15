@@ -2,56 +2,75 @@
 -- GOVERNMENT RECRUITMENT EXAMINATION MANAGEMENT SYSTEM (GREMS)
 -- Database: PostgreSQL 15+ (Supabase Compatible)
 -- File: database/sample_data/insert_data.sql
--- Description: Realistic demonstration dummy dataset for all nine tables.
+-- Description: Complete, realistic, and idempotent demonstration dataset
+--              for all nine relational tables.
 --
--- IMPORTANT PREREQUISITES:
--- 1. Run database/schema/create_tables.sql in Supabase SQL Editor.
--- 2. Register the following 4 demo accounts via Supabase Auth (Signup):
---      • admin.demo@example.com (Administrator)
---      • rahul.demo@example.com (Candidate 1)
---      • priya.demo@example.com (Candidate 2)
---      • arjun.demo@example.com (Candidate 3)
--- 3. Promote the admin account in Supabase SQL Editor using:
---      UPDATE public.profiles SET role = 'admin' WHERE email = 'admin.demo@example.com';
+-- EXECUTION ORDER:
+-- 1. Execute database/schema/create_tables.sql in Supabase SQL Editor.
+-- 2. From backend directory, run: npm run seed:users
+--    (Alternatively, register the 4 demo accounts via your frontend /register page)
+-- 3. Execute this file (database/sample_data/insert_data.sql) in Supabase SQL Editor.
+-- 4. Execute queries from database/queries/queries.sql to test DBMS concepts.
 -- ============================================================================
 
 -- ============================================================================
 -- PREREQUISITE VALIDATION BLOCK
 -- Verifies that all 4 required Supabase Auth profiles exist before inserting data.
--- If any profile is missing, raises an exception and halts execution.
+-- If any profile is missing, raises an exception pointing to `npm run seed:users`.
 -- ============================================================================
 DO $$
 DECLARE
-    v_missing_profiles TEXT := '';
+    v_admin_email TEXT;
+    v_cand1_email TEXT;
+    v_cand2_email TEXT;
+    v_cand3_email TEXT;
+    v_missing TEXT := '';
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE email = 'admin.demo@example.com') THEN
-        v_missing_profiles := v_missing_profiles || '  - admin.demo@example.com (Administrator)' || chr(10);
+    -- Check Admin account (accepts admin@gov.in or admin.demo@example.com)
+    SELECT email INTO v_admin_email FROM public.profiles 
+    WHERE email IN ('admin@gov.in', 'admin.demo@example.com', 'admin.recruitment@gov.in') LIMIT 1;
+    IF v_admin_email IS NULL THEN
+        v_missing := v_missing || '  - Administrator: admin@gov.in' || chr(10);
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE email = 'rahul.demo@example.com') THEN
-        v_missing_profiles := v_missing_profiles || '  - rahul.demo@example.com (Candidate 1)' || chr(10);
+    -- Check Candidate 1 (Rahul)
+    SELECT email INTO v_cand1_email FROM public.profiles 
+    WHERE email IN ('rahul.sharma@example.com', 'rahul.demo@example.com', 'rohan.sharma@example.com') LIMIT 1;
+    IF v_cand1_email IS NULL THEN
+        v_missing := v_missing || '  - Candidate 1: rahul.sharma@example.com' || chr(10);
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE email = 'priya.demo@example.com') THEN
-        v_missing_profiles := v_missing_profiles || '  - priya.demo@example.com (Candidate 2)' || chr(10);
+    -- Check Candidate 2 (Priya)
+    SELECT email INTO v_cand2_email FROM public.profiles 
+    WHERE email IN ('priya.patel@example.com', 'priya.demo@example.com') LIMIT 1;
+    IF v_cand2_email IS NULL THEN
+        v_missing := v_missing || '  - Candidate 2: priya.patel@example.com' || chr(10);
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE email = 'arjun.demo@example.com') THEN
-        v_missing_profiles := v_missing_profiles || '  - arjun.demo@example.com (Candidate 3)' || chr(10);
+    -- Check Candidate 3 (Amit)
+    SELECT email INTO v_cand3_email FROM public.profiles 
+    WHERE email IN ('amit.kumar@example.com', 'amit.verma@example.com', 'arjun.demo@example.com') LIMIT 1;
+    IF v_cand3_email IS NULL THEN
+        v_missing := v_missing || '  - Candidate 3: amit.kumar@example.com' || chr(10);
     END IF;
 
-    IF v_missing_profiles <> '' THEN
-        RAISE EXCEPTION E'\n========================================================================\n[PREREQUISITE CHECK FAILED] Required demonstration accounts missing!\n========================================================================\nPlease register the following accounts via Supabase Auth before running this script:\n%\nAlso ensure the admin account is promoted using:\n  UPDATE public.profiles SET role = ''admin'' WHERE email = ''admin.demo@example.com'';\n========================================================================', v_missing_profiles;
+    IF v_missing <> '' THEN
+        RAISE EXCEPTION E'\n========================================================================\n[PREREQUISITE CHECK FAILED] Required demonstration accounts missing!\n========================================================================\nPlease create the required demonstration accounts by running:\n  cd backend\n  npm run seed:users\n\nor register these accounts via Supabase Auth / Signup:\n%\n========================================================================', v_missing;
     END IF;
 
-    RAISE NOTICE 'Prerequisite check passed: All 4 demonstration profiles are registered in public.profiles.';
+    -- Ensure admin account has role = 'admin'
+    UPDATE public.profiles 
+    SET role = 'admin', updated_at = NOW() 
+    WHERE email = v_admin_email AND role <> 'admin';
+
+    RAISE NOTICE 'Prerequisite check passed! Proceeding with idempotent dataset insertion.';
 END $$;
 
 BEGIN;
 
 -- ============================================================================
--- 1. CANDIDATES (Three Records)
--- Linked to registered Auth profiles via email lookup.
+-- 1. CANDIDATES (Three Core Aspirant Records)
+-- Linked to registered public.profiles records via email resolution.
 -- ============================================================================
 INSERT INTO public.candidates (
     candidate_id,
@@ -70,58 +89,67 @@ INSERT INTO public.candidates (
     updated_at
 ) VALUES
 (
-    '11111111-1111-4111-8111-111111111111',
-    (SELECT id FROM public.profiles WHERE email = 'rahul.demo@example.com'),
-    'CAND2027001',
+    'd1000000-0000-0000-0000-000000000001',
+    (SELECT id FROM public.profiles WHERE email IN ('rahul.sharma@example.com', 'rahul.demo@example.com', 'rohan.sharma@example.com') LIMIT 1),
+    'CND-2027-00101',
     'Rahul Sharma',
-    DATE '1999-05-14',
+    DATE '1998-04-12',
     'Male',
-    '9880123456',
-    '#102, 4th Cross, Malleshwaram',
+    '9811223344',
+    'Flat 402, Shanti Vihar, Sector 15',
+    'New Delhi',
+    'Delhi',
+    '110001',
+    'General',
+    TIMESTAMPTZ '2026-01-05 10:05:00+00',
+    TIMESTAMPTZ '2026-01-05 10:05:00+00'
+),
+(
+    'd1000000-0000-0000-0000-000000000002',
+    (SELECT id FROM public.profiles WHERE email IN ('priya.patel@example.com', 'priya.demo@example.com') LIMIT 1),
+    'CND-2027-00102',
+    'Priya Patel',
+    DATE '1999-07-25',
+    'Female',
+    '9822334455',
+    '34, 4th Cross, Malleshwaram',
     'Bengaluru',
     'Karnataka',
     '560003',
-    'General',
-    NOW(),
-    NOW()
-),
-(
-    '22222222-2222-4222-8222-222222222222',
-    (SELECT id FROM public.profiles WHERE email = 'priya.demo@example.com'),
-    'CAND2027002',
-    'Priya Nair',
-    DATE '2000-08-22',
-    'Female',
-    '9880654321',
-    '#45, Kadri Temple Road',
-    'Mangaluru',
-    'Karnataka',
-    '575002',
     'OBC',
-    NOW(),
-    NOW()
+    TIMESTAMPTZ '2026-01-06 11:35:00+00',
+    TIMESTAMPTZ '2026-01-06 11:35:00+00'
 ),
 (
-    '33333333-3333-4333-8333-333333333333',
-    (SELECT id FROM public.profiles WHERE email = 'arjun.demo@example.com'),
-    'CAND2027003',
-    'Arjun Patel',
-    DATE '1998-11-30',
+    'd1000000-0000-0000-0000-000000000003',
+    (SELECT id FROM public.profiles WHERE email IN ('amit.kumar@example.com', 'amit.verma@example.com', 'arjun.demo@example.com') LIMIT 1),
+    'CND-2027-00103',
+    'Amit Kumar',
+    DATE '1997-11-19',
     'Male',
-    '9820112233',
-    'Flat 301, Sea Breeze Apartments, Bandra West',
-    'Mumbai',
-    'Maharashtra',
-    '400050',
-    'General',
-    NOW(),
-    NOW()
+    '9833445566',
+    'Flat 102, Gomti Nagar',
+    'Lucknow',
+    'Uttar Pradesh',
+    '226010',
+    'SC',
+    TIMESTAMPTZ '2026-01-07 14:20:00+00',
+    TIMESTAMPTZ '2026-01-07 14:20:00+00'
 )
-ON CONFLICT (candidate_id) DO NOTHING;
+ON CONFLICT (candidate_id) DO UPDATE
+SET full_name = EXCLUDED.full_name,
+    candidate_number = EXCLUDED.candidate_number,
+    phone_number = EXCLUDED.phone_number,
+    address = EXCLUDED.address,
+    city = EXCLUDED.city,
+    state = EXCLUDED.state,
+    pincode = EXCLUDED.pincode,
+    category = EXCLUDED.category,
+    updated_at = NOW();
 
 -- ============================================================================
--- 2. EDUCATIONAL QUALIFICATIONS (Eight Records)
--- Each candidate has at least 2 qualifications covering SSLC, PUC, and B.E.
+-- 2. EDUCATIONAL QUALIFICATIONS (Eight Academic Records)
+-- Multi-tier academic credentials across candidates (1:N relationship).
 -- ============================================================================
 INSERT INTO public.educational_qualifications (
     qualification_id,
@@ -133,94 +161,98 @@ INSERT INTO public.educational_qualifications (
     percentage,
     created_at
 ) VALUES
--- Qualifications for Candidate 1 (Rahul Sharma)
+-- Candidate 1: Rahul Sharma (SSLC, PUC, Undergraduate)
 (
-    '41111111-0000-4000-8000-000000000001',
-    '11111111-1111-4111-8111-111111111111',
+    'q1000000-0000-0000-0000-000000000001',
+    'd1000000-0000-0000-0000-000000000001',
     'SSLC',
-    'National High School, Basavanagudi',
-    'Karnataka Secondary Education Examination Board',
+    'Delhi Public School, RK Puram',
+    'CBSE',
     2015,
-    88.50,
-    NOW()
+    91.50,
+    TIMESTAMPTZ '2026-01-05 10:10:00+00'
 ),
 (
-    '41111111-0000-4000-8000-000000000002',
-    '11111111-1111-4111-8111-111111111111',
+    'q1000000-0000-0000-0000-000000000002',
+    'd1000000-0000-0000-0000-000000000001',
     'PUC',
-    'MES Pre-University College, Malleshwaram',
-    'Department of Pre-University Education, Karnataka',
+    'Delhi Public School, RK Puram',
+    'CBSE',
     2017,
-    85.20,
-    NOW()
+    89.20,
+    TIMESTAMPTZ '2026-01-05 10:11:00+00'
 ),
 (
-    '41111111-0000-4000-8000-000000000003',
-    '11111111-1111-4111-8111-111111111111',
-    'B.E.',
-    'B.M.S. College of Engineering, Bengaluru',
-    'Visvesvaraya Technological University',
+    'q1000000-0000-0000-0000-000000000003',
+    'd1000000-0000-0000-0000-000000000001',
+    'Undergraduate',
+    'Delhi Technological University',
+    'DTU',
     2021,
-    81.40,
-    NOW()
+    84.20,
+    TIMESTAMPTZ '2026-01-05 10:12:00+00'
 ),
--- Qualifications for Candidate 2 (Priya Nair)
+-- Candidate 2: Priya Patel (SSLC, PUC, Undergraduate)
 (
-    '42222222-0000-4000-8000-000000000001',
-    '22222222-2222-4222-8222-222222222222',
+    'q1000000-0000-0000-0000-000000000004',
+    'd1000000-0000-0000-0000-000000000002',
     'SSLC',
-    'St. Aloysius High School, Mangaluru',
-    'Karnataka Secondary Education Examination Board',
-    2016,
-    92.00,
-    NOW()
+    'National Public School, Indiranagar',
+    'Karnataka State Board',
+    2015,
+    93.40,
+    TIMESTAMPTZ '2026-01-06 11:38:00+00'
 ),
 (
-    '42222222-0000-4000-8000-000000000002',
-    '22222222-2222-4222-8222-222222222222',
+    'q1000000-0000-0000-0000-000000000005',
+    'd1000000-0000-0000-0000-000000000002',
     'PUC',
-    'Canara Pre-University College, Mangaluru',
-    'Department of Pre-University Education, Karnataka',
-    2018,
-    89.60,
-    NOW()
+    'MES Pre-University College',
+    'Karnataka PUE Board',
+    2017,
+    90.10,
+    TIMESTAMPTZ '2026-01-06 11:39:00+00'
 ),
 (
-    '42222222-0000-4000-8000-000000000003',
-    '22222222-2222-4222-8222-222222222222',
-    'B.E.',
-    'NMAM Institute of Technology, Nitte',
-    'Visvesvaraya Technological University',
-    2022,
-    84.75,
-    NOW()
+    'q1000000-0000-0000-0000-000000000006',
+    'd1000000-0000-0000-0000-000000000002',
+    'Undergraduate',
+    'BMS College of Engineering',
+    'VTU Belagavi',
+    2021,
+    88.00,
+    TIMESTAMPTZ '2026-01-06 11:40:00+00'
 ),
--- Qualifications for Candidate 3 (Arjun Patel)
+-- Candidate 3: Amit Kumar (SSLC, Undergraduate)
 (
-    '43333333-0000-4000-8000-000000000001',
-    '33333333-3333-4333-8333-333333333333',
+    'q1000000-0000-0000-0000-000000000007',
+    'd1000000-0000-0000-0000-000000000003',
     'SSLC',
-    'St. Xavier''s High School, Fort, Mumbai',
-    'Maharashtra State Board of Secondary and Higher Secondary Education',
+    'La Martiniere College, Lucknow',
+    'ICSE',
     2014,
-    87.20,
-    NOW()
+    86.50,
+    TIMESTAMPTZ '2026-01-07 14:22:00+00'
 ),
 (
-    '43333333-0000-4000-8000-000000000002',
-    '33333333-3333-4333-8333-333333333333',
-    'B.E.',
-    'Veermata Jijabai Technological Institute (VJTI), Mumbai',
-    'University of Mumbai',
+    'q1000000-0000-0000-0000-000000000008',
+    'd1000000-0000-0000-0000-000000000003',
+    'Undergraduate',
+    'University of Lucknow',
+    'Lucknow University',
     2020,
-    79.80,
-    NOW()
+    81.25,
+    TIMESTAMPTZ '2026-01-07 14:25:00+00'
 )
-ON CONFLICT (qualification_id) DO NOTHING;
+ON CONFLICT (qualification_id) DO UPDATE
+SET percentage = EXCLUDED.percentage,
+    passing_year = EXCLUDED.passing_year,
+    institution_name = EXCLUDED.institution_name,
+    board_or_university = EXCLUDED.board_or_university;
 
 -- ============================================================================
--- 3. EXAMINATIONS (Three Records)
--- Conducted in 2027 by KPSC, SSC, and UPSC.
+-- 3. EXAMINATIONS (Three Public Recruitment Notices Scheduled for 2027)
+-- Active application dates allow live web portal testing.
 -- ============================================================================
 INSERT INTO public.examinations (
     examination_id,
@@ -240,61 +272,67 @@ INSERT INTO public.examinations (
     updated_at
 ) VALUES
 (
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    'KSGRE2027',
-    'Karnataka State Government Recruitment Examination 2027',
-    'Karnataka Public Service Commission',
-    'Recruitment examination for Group A and B administrative posts across Karnataka State Civil Services.',
-    'Bachelor degree in any discipline from a recognized University. Age between 21 and 35 years.',
-    DATE '2027-01-10',
-    DATE '2027-03-31',
-    DATE '2027-06-20',
-    500.00,
-    250,
-    'open',
-    (SELECT id FROM public.profiles WHERE email = 'admin.demo@example.com'),
-    NOW(),
-    NOW()
-),
-(
-    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    'CGCRE2027',
-    'Central Government Clerical Recruitment Examination 2027',
+    'e1000000-0000-0000-0000-000000000001',
+    'SSC-CGL-2027',
+    'Combined Graduate Level Examination 2027',
     'Staff Selection Commission',
-    'National level competitive test for Lower Division Clerk, Junior Secretariat Assistant, and Data Entry Operator positions.',
-    '12th Standard or equivalent from a recognized board. Age between 18 and 27 years.',
-    DATE '2027-02-01',
-    DATE '2027-04-15',
-    DATE '2027-07-10',
-    300.00,
-    500,
-    'open',
-    (SELECT id FROM public.profiles WHERE email = 'admin.demo@example.com'),
-    NOW(),
-    NOW()
+    'Nationwide recruitment for Group B and Group C non-technical posts across Ministries of India.',
+    'Graduation from any recognized university. Age between 18 and 32 years.',
+    DATE '2026-10-01',
+    DATE '2027-06-30',
+    DATE '2027-09-15',
+    100.00,
+    8400,
+    'published',
+    (SELECT id FROM public.profiles WHERE role = 'admin' LIMIT 1),
+    TIMESTAMPTZ '2026-10-01 09:00:00+00',
+    TIMESTAMPTZ '2026-10-01 09:00:00+00'
 ),
 (
-    'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-    'NASPE2027',
-    'National Administrative Services Preliminary Examination 2027',
+    'e1000000-0000-0000-0000-000000000002',
+    'UPSC-CSE-2027',
+    'Civil Services (Preliminary) Examination 2027',
     'Union Public Service Commission',
-    'Premier civil services screening examination for selection to prestigious all-India administrative and police cadres.',
-    'Degree from an incorporated university. Age criteria 21 to 32 years.',
-    DATE '2027-01-15',
-    DATE '2027-03-15',
-    DATE '2027-05-23',
+    'Premier national competitive examination for IAS, IPS, and IFS cadres.',
+    'Bachelors Degree in any discipline. Age limit 21 to 32 years.',
+    DATE '2026-11-01',
+    DATE '2027-07-31',
+    DATE '2027-10-20',
     100.00,
-    100,
-    'upcoming',
-    (SELECT id FROM public.profiles WHERE email = 'admin.demo@example.com'),
-    NOW(),
-    NOW()
+    1056,
+    'published',
+    (SELECT id FROM public.profiles WHERE role = 'admin' LIMIT 1),
+    TIMESTAMPTZ '2026-11-01 10:00:00+00',
+    TIMESTAMPTZ '2026-11-01 10:00:00+00'
+),
+(
+    'e1000000-0000-0000-0000-000000000003',
+    'RRB-NTPC-2027',
+    'Non-Technical Popular Categories (NTPC) 2027',
+    'Railway Recruitment Control Board',
+    'Recruitment of Station Master, Commercial Clerk, and Goods Guard across 21 railway divisions.',
+    '12th Standard or Bachelor Degree depending on category.',
+    DATE '2026-08-01',
+    DATE '2027-05-30',
+    DATE '2027-08-10',
+    250.00,
+    11558,
+    'completed',
+    (SELECT id FROM public.profiles WHERE role = 'admin' LIMIT 1),
+    TIMESTAMPTZ '2026-08-01 08:30:00+00',
+    TIMESTAMPTZ '2026-08-01 08:30:00+00'
 )
-ON CONFLICT (examination_id) DO NOTHING;
+ON CONFLICT (examination_id) DO UPDATE
+SET examination_name = EXCLUDED.examination_name,
+    application_start_date = EXCLUDED.application_start_date,
+    application_end_date = EXCLUDED.application_end_date,
+    examination_date = EXCLUDED.examination_date,
+    examination_status = EXCLUDED.examination_status,
+    total_vacancies = EXCLUDED.total_vacancies,
+    updated_at = NOW();
 
 -- ============================================================================
--- 4. EXAM CENTERS (Three Records)
--- Physical venues located in Bengaluru, Mangaluru, and Mumbai.
+-- 4. EXAM CENTERS (Four Accredited Physical Venues Across Metropolitan Hubs)
 -- ============================================================================
 INSERT INTO public.exam_centers (
     center_id,
@@ -309,46 +347,63 @@ INSERT INTO public.exam_centers (
     created_at
 ) VALUES
 (
-    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-    'BLR-GFGC-01',
-    'Government First Grade College, Bengaluru',
-    'Post Office Road, K.R. Circle',
+    'f1000000-0000-0000-0000-000000000001',
+    'DEL-KV-101',
+    'Kendriya Vidyalaya No. 1 Delhi Cantt',
+    'Sadhu Vaswani Marg, Delhi Cantt, New Delhi',
+    'New Delhi',
+    'Delhi',
+    '110010',
+    '011-25691234',
+    600,
+    TIMESTAMPTZ '2026-01-02 10:00:00+00'
+),
+(
+    'f1000000-0000-0000-0000-000000000002',
+    'BLR-GAC-201',
+    'Government Arts and Science College',
+    'Post Office Road, K.R. Circle, Bengaluru',
     'Bengaluru',
     'Karnataka',
     '560001',
     '080-22214567',
-    600,
-    NOW()
-),
-(
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-    'MNG-UCOL-02',
-    'University College, Mangaluru',
-    'Hampankatta Road',
-    'Mangaluru',
-    'Karnataka',
-    '575001',
-    '0824-2422345',
     500,
-    NOW()
+    TIMESTAMPTZ '2026-01-02 10:30:00+00'
 ),
 (
-    'ffffffff-ffff-4fff-8fff-ffffffffffff',
-    'MUM-GEC-03',
-    'Government Engineering College, Mumbai',
-    'Mahapalika Marg, Dhobi Talao',
+    'f1000000-0000-0000-0000-000000000003',
+    'LKO-NP-301',
+    'National Post Graduate College',
+    '2 Rana Pratap Marg, Hazratganj, Lucknow',
+    'Lucknow',
+    'Uttar Pradesh',
+    '226001',
+    '0522-2612345',
+    450,
+    TIMESTAMPTZ '2026-01-02 11:00:00+00'
+),
+(
+    'f1000000-0000-0000-0000-000000000004',
+    'MUM-GEC-401',
+    'Government Polytechnic Bandra',
+    '49 Kherwadi, Ali Yavar Jung Marg, Bandra East, Mumbai',
     'Mumbai',
     'Maharashtra',
-    '400001',
-    '022-22620601',
-    750,
-    NOW()
+    '400051',
+    '022-26474580',
+    550,
+    TIMESTAMPTZ '2026-01-02 11:30:00+00'
 )
-ON CONFLICT (center_id) DO NOTHING;
+ON CONFLICT (center_id) DO UPDATE
+SET center_name = EXCLUDED.center_name,
+    address = EXCLUDED.address,
+    city = EXCLUDED.city,
+    state = EXCLUDED.state,
+    total_capacity = EXCLUDED.total_capacity;
 
 -- ============================================================================
--- 5. EXAMINATION CENTERS (Seven Allocations)
--- Maps examinations to centers; allocated_capacity <= total_capacity.
+-- 5. EXAMINATION CENTERS (Seven Junction Allocations)
+-- Maps exams to accredited centers with designated quotas (M:N junction).
 -- ============================================================================
 INSERT INTO public.examination_centers (
     examination_id,
@@ -356,56 +411,56 @@ INSERT INTO public.examination_centers (
     allocated_capacity,
     created_at
 ) VALUES
--- KSGRE2027 allocations
+-- Exam 1: SSC-CGL-2027 allocations
 (
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    'e1000000-0000-0000-0000-000000000001',
+    'f1000000-0000-0000-0000-000000000001',
     300,
-    NOW()
+    TIMESTAMPTZ '2026-10-02 10:00:00+00'
 ),
 (
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-    200,
-    NOW()
-),
--- CGCRE2027 allocations
-(
-    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    'e1000000-0000-0000-0000-000000000001',
+    'f1000000-0000-0000-0000-000000000002',
     250,
-    NOW()
+    TIMESTAMPTZ '2026-10-02 10:00:00+00'
 ),
 (
-    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    'ffffffff-ffff-4fff-8fff-ffffffffffff',
-    400,
-    NOW()
+    'e1000000-0000-0000-0000-000000000001',
+    'f1000000-0000-0000-0000-000000000004',
+    250,
+    TIMESTAMPTZ '2026-10-02 10:00:00+00'
 ),
--- NASPE2027 allocations
+-- Exam 2: UPSC-CSE-2027 allocations
 (
-    'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    'e1000000-0000-0000-0000-000000000002',
+    'f1000000-0000-0000-0000-000000000001',
+    250,
+    TIMESTAMPTZ '2026-11-02 10:30:00+00'
+),
+(
+    'e1000000-0000-0000-0000-000000000002',
+    'f1000000-0000-0000-0000-000000000002',
     200,
-    NOW()
+    TIMESTAMPTZ '2026-11-02 10:30:00+00'
 ),
 (
-    'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-    150,
-    NOW()
+    'e1000000-0000-0000-0000-000000000002',
+    'f1000000-0000-0000-0000-000000000003',
+    200,
+    TIMESTAMPTZ '2026-11-02 10:30:00+00'
 ),
+-- Exam 3: RRB-NTPC-2027 allocation
 (
-    'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-    'ffffffff-ffff-4fff-8fff-ffffffffffff',
-    300,
-    NOW()
+    'e1000000-0000-0000-0000-000000000003',
+    'f1000000-0000-0000-0000-000000000003',
+    350,
+    TIMESTAMPTZ '2026-08-02 09:00:00+00'
 )
-ON CONFLICT (examination_id, center_id) DO NOTHING;
+ON CONFLICT (examination_id, center_id) DO UPDATE
+SET allocated_capacity = EXCLUDED.allocated_capacity;
 
 -- ============================================================================
--- 6. APPLICATIONS (Four Records)
--- Every (examination_id, center_id) exists in examination_centers.
+-- 6. APPLICATIONS (Four Candidate Applications Across Exams)
 -- ============================================================================
 INSERT INTO public.applications (
     application_id,
@@ -419,59 +474,67 @@ INSERT INTO public.applications (
     remarks,
     updated_at
 ) VALUES
+-- Application 1: Rahul on SSC CGL
 (
-    '10000000-0000-4000-8000-000000000001',
-    'APP2027001',
-    '11111111-1111-4111-8111-111111111111',
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-    '2027-01-20 10:15:00+05:30',
-    'approved',
+    'b1000000-0000-0000-0000-000000000001',
+    'APP-2027-0001',
+    'd1000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000001',
+    'f1000000-0000-0000-0000-000000000001',
+    TIMESTAMPTZ '2026-10-15 10:15:00+00',
+    'accepted',
     'paid',
-    'Candidate eligibility and documents verified successfully.',
-    NOW()
+    'Application documents and identity verified.',
+    TIMESTAMPTZ '2026-10-16 14:00:00+00'
 ),
+-- Application 2: Priya on SSC CGL
 (
-    '10000000-0000-4000-8000-000000000002',
-    'APP2027002',
-    '22222222-2222-4222-8222-222222222222',
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-    '2027-01-25 14:30:00+05:30',
-    'approved',
+    'b1000000-0000-0000-0000-000000000002',
+    'APP-2027-0002',
+    'd1000000-0000-0000-0000-000000000002',
+    'e1000000-0000-0000-0000-000000000001',
+    'f1000000-0000-0000-0000-000000000002',
+    TIMESTAMPTZ '2026-10-18 11:20:00+00',
+    'accepted',
     'paid',
-    'OBC category reservation documents confirmed.',
-    NOW()
+    'Eligibility confirmed.',
+    TIMESTAMPTZ '2026-10-19 16:00:00+00'
 ),
+-- Application 3: Amit on RRB NTPC
 (
-    '10000000-0000-4000-8000-000000000003',
-    'APP2027003',
-    '33333333-3333-4333-8333-333333333333',
-    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    'ffffffff-ffff-4fff-8fff-ffffffffffff',
-    '2027-02-10 11:00:00+05:30',
-    'approved',
+    'b1000000-0000-0000-0000-000000000003',
+    'APP-2027-0003',
+    'd1000000-0000-0000-0000-000000000003',
+    'e1000000-0000-0000-0000-000000000003',
+    'f1000000-0000-0000-0000-000000000003',
+    TIMESTAMPTZ '2026-08-20 14:00:00+00',
+    'accepted',
     'paid',
-    'Application scrutinised and approved for clerical recruitment.',
-    NOW()
+    'Approved for RRB examination.',
+    TIMESTAMPTZ '2026-08-21 10:00:00+00'
 ),
+-- Application 4: Rahul on UPSC CSE (Submitted / Pending Review)
 (
-    '10000000-0000-4000-8000-000000000004',
-    'APP2027004',
-    '11111111-1111-4111-8111-111111111111',
-    'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-    '2027-02-15 16:45:00+05:30',
+    'b1000000-0000-0000-0000-000000000004',
+    'APP-2027-0004',
+    'd1000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000002',
+    'f1000000-0000-0000-0000-000000000001',
+    TIMESTAMPTZ '2026-11-05 09:30:00+00',
     'submitted',
-    'pending',
-    'Online submission received, awaiting fee clearance.',
-    NOW()
+    'paid',
+    'Application under administrative scrutiny.',
+    TIMESTAMPTZ '2026-11-05 09:30:00+00'
 )
-ON CONFLICT (application_id) DO NOTHING;
+ON CONFLICT (application_id) DO UPDATE
+SET application_status = EXCLUDED.application_status,
+    payment_status = EXCLUDED.payment_status,
+    remarks = EXCLUDED.remarks,
+    updated_at = NOW();
 
 -- ============================================================================
--- 7. ADMIT CARDS (Three Records)
--- Issued exclusively for approved examination applications.
+-- 7. ADMIT CARDS (Three Issued Examination Hall Tickets)
+-- Generated for accepted applications with unique roll numbers.
 -- ============================================================================
 INSERT INTO public.admit_cards (
     admit_card_id,
@@ -485,43 +548,46 @@ INSERT INTO public.admit_cards (
     created_at
 ) VALUES
 (
-    '20000000-0000-4000-8000-000000000001',
-    '10000000-0000-4000-8000-000000000001',
-    'AC2027001',
-    'ROLL2027101',
-    DATE '2027-05-15',
+    'ac000000-0000-0000-0000-000000000001',
+    'b1000000-0000-0000-0000-000000000001',
+    'AC-2027-0001',
+    'ROLL-SSCCGL-27001',
+    DATE '2027-08-25',
     TIME '08:30:00',
-    '1. Bring original Government Photo ID and printed Admit Card.\n2. Arrive at least 45 minutes before reporting time.\n3. Electronic devices are strictly prohibited.',
-    'https://example.com/admit-cards/AC2027001.pdf',
-    NOW()
+    '1. Bring original Government Photo ID.' || chr(10) || '2. Carry printed Admit Card.' || chr(10) || '3. Electronic items are strictly prohibited.',
+    NULL,
+    TIMESTAMPTZ '2027-08-25 09:00:00+00'
 ),
 (
-    '20000000-0000-4000-8000-000000000002',
-    '10000000-0000-4000-8000-000000000002',
-    'AC2027002',
-    'ROLL2027102',
-    DATE '2027-05-15',
+    'ac000000-0000-0000-0000-000000000002',
+    'b1000000-0000-0000-0000-000000000002',
+    'AC-2027-0002',
+    'ROLL-SSCCGL-27002',
+    DATE '2027-08-25',
     TIME '08:30:00',
-    '1. Carry printed Hall Ticket and valid Identity Proof.\n2. Report to Examination Hall by 08:30 AM.',
-    'https://example.com/admit-cards/AC2027002.pdf',
-    NOW()
+    '1. Bring original Government Photo ID.' || chr(10) || '2. Carry printed Admit Card.',
+    NULL,
+    TIMESTAMPTZ '2027-08-25 09:00:00+00'
 ),
 (
-    '20000000-0000-4000-8000-000000000003',
-    '10000000-0000-4000-8000-000000000003',
-    'AC2027003',
-    'ROLL2027201',
-    DATE '2027-06-01',
-    TIME '09:00:00',
-    '1. Bring original Photo ID proof.\n2. Smartwatches and mobile phones are prohibited inside the examination center.',
-    'https://example.com/admit-cards/AC2027003.pdf',
-    NOW()
+    'ac000000-0000-0000-0000-000000000003',
+    'b1000000-0000-0000-0000-000000000003',
+    'AC-2027-0003',
+    'ROLL-RRBNTPC-27001',
+    DATE '2027-07-20',
+    TIME '08:30:00',
+    '1. Bring original Photo ID card.' || chr(10) || '2. Arrive 45 minutes before exam schedule.',
+    NULL,
+    TIMESTAMPTZ '2027-07-20 09:00:00+00'
 )
-ON CONFLICT (admit_card_id) DO NOTHING;
+ON CONFLICT (admit_card_id) DO UPDATE
+SET roll_number = EXCLUDED.roll_number,
+    issue_date = EXCLUDED.issue_date,
+    reporting_time = EXCLUDED.reporting_time;
 
 -- ============================================================================
--- 8. RESULTS (Three Records)
--- Evaluation marks, ranks, and pass/fail statuses for tested candidates.
+-- 8. RESULTS (Three Official Candidate Scorecards)
+-- Demonstrates percentage computation, ranking, pass/fail, and publication states.
 -- ============================================================================
 INSERT INTO public.results (
     result_id,
@@ -530,44 +596,74 @@ INSERT INTO public.results (
     maximum_marks,
     rank,
     result_status,
+    is_published,
     published_at,
     remarks,
     created_at
 ) VALUES
+-- Rahul Sharma (Score: 86.50/100, Rank 1 in exam)
 (
-    '30000000-0000-4000-8000-000000000001',
-    '10000000-0000-4000-8000-000000000001',
+    'r1000000-0000-0000-0000-000000000001',
+    'b1000000-0000-0000-0000-000000000001',
     86.50,
     100.00,
     1,
     'pass',
-    '2027-07-15 10:00:00+05:30',
-    'Qualified for interview round with top merit score.',
-    NOW()
+    TRUE,
+    TIMESTAMPTZ '2027-09-25 10:00:00+00',
+    'Qualified for document verification round.',
+    TIMESTAMPTZ '2027-09-25 09:30:00+00'
 ),
+-- Priya Patel (Score: 78.00/100, Rank 2 in exam)
 (
-    '30000000-0000-4000-8000-000000000002',
-    '10000000-0000-4000-8000-000000000002',
+    'r1000000-0000-0000-0000-000000000002',
+    'b1000000-0000-0000-0000-000000000002',
     78.00,
     100.00,
     2,
     'pass',
-    '2027-07-15 10:00:00+05:30',
-    'Qualified under OBC reservation category quota.',
-    NOW()
+    TRUE,
+    TIMESTAMPTZ '2027-09-25 10:00:00+00',
+    'Qualified for document verification round.',
+    TIMESTAMPTZ '2027-09-25 09:30:00+00'
 ),
+-- Amit Kumar (Score: 92.50/100, Rank 1 in exam)
 (
-    '30000000-0000-4000-8000-000000000003',
-    '10000000-0000-4000-8000-000000000003',
+    'r1000000-0000-0000-0000-000000000003',
+    'b1000000-0000-0000-0000-000000000003',
     92.50,
     100.00,
     1,
     'pass',
-    '2027-08-01 11:00:00+05:30',
-    'Secured overall 1st rank in Central Clerical Examination.',
-    NOW()
+    TRUE,
+    TIMESTAMPTZ '2027-08-20 10:00:00+00',
+    'Selected in top merit list for Station Master.',
+    TIMESTAMPTZ '2027-08-20 09:30:00+00'
 )
-ON CONFLICT (result_id) DO NOTHING;
+ON CONFLICT (result_id) DO UPDATE
+SET marks_obtained = EXCLUDED.marks_obtained,
+    maximum_marks = EXCLUDED.maximum_marks,
+    rank = EXCLUDED.rank,
+    result_status = EXCLUDED.result_status,
+    is_published = EXCLUDED.is_published,
+    published_at = EXCLUDED.published_at,
+    remarks = EXCLUDED.remarks;
 
 COMMIT;
 
+-- Verification of inserted records
+SELECT 'candidates' AS table_name, COUNT(*) AS count FROM public.candidates
+UNION ALL
+SELECT 'educational_qualifications', COUNT(*) FROM public.educational_qualifications
+UNION ALL
+SELECT 'examinations', COUNT(*) FROM public.examinations
+UNION ALL
+SELECT 'exam_centers', COUNT(*) FROM public.exam_centers
+UNION ALL
+SELECT 'examination_centers', COUNT(*) FROM public.examination_centers
+UNION ALL
+SELECT 'applications', COUNT(*) FROM public.applications
+UNION ALL
+SELECT 'admit_cards', COUNT(*) FROM public.admit_cards
+UNION ALL
+SELECT 'results', COUNT(*) FROM public.results;

@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { examAPI, candidateAPI, applicationAPI, centerAPI } from '../services/api';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Alert } from '../components/common/Alert';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
 import { FileText, CheckCircle2, Building, AlertCircle, ArrowLeft } from 'lucide-react';
 
-export const ApplyExam = () => {
+export function ApplyExam() {
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const examIdParam = searchParams.get('exam_id');
+  const examIdParam = id || searchParams.get('exam_id');
   const navigate = useNavigate();
 
   const [candidate, setCandidate] = useState(null);
@@ -36,7 +39,7 @@ export const ApplyExam = () => {
           if (examIdParam) {
             setSelectedExamId(examIdParam);
           } else if (eRes.data.length > 0) {
-            setSelectedExamId(eRes.data[0].examination_id);
+            setSelectedExamId(eRes.data[0].examination_id || eRes.data[0].id);
           }
         }
         if (centRes.success) {
@@ -52,12 +55,12 @@ export const ApplyExam = () => {
     initData();
   }, [examIdParam]);
 
-  const selectedExam = exams.find((e) => e.examination_id === selectedExamId);
+  const selectedExam = exams.find((e) => (e.examination_id || e.id) === selectedExamId);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!declaration) {
-      setAlert({ type: 'warning', message: 'You must declare that all submitted information is authentic.' });
+      setAlert({ type: 'warning', message: 'You must declare that all submitted information is authentic and accurate.' });
       return;
     }
 
@@ -83,21 +86,24 @@ export const ApplyExam = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner message="Preparing examination application form..." />;
+  if (loading) return <LoadingSpinner label="Preparing examination application dossier..." />;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <Link to="/candidate/examinations" className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to available examinations</span>
-      </Link>
-
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-slate-900">Official Examination Application</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          Review your candidate profile, select the target examination and examination center venue.
-        </p>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Official Examination Application Form"
+        subtitle="Review your candidate dossier, select examination notice, and choose preferred test center"
+        crumbs={[
+          { label: 'Dashboard', to: '/candidate/dashboard' },
+          { label: 'Examinations', to: '/candidate/examinations' },
+          { label: 'Apply' }
+        ]}
+        actions={
+          <Link to="/candidate/examinations" className="gov-btn gov-btn-outline text-xs">
+            <ArrowLeft size={14} /> Back to Notices
+          </Link>
+        }
+      />
 
       {alert && (
         <Alert
@@ -107,56 +113,55 @@ export const ApplyExam = () => {
         />
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-6 text-xs">
+      <form onSubmit={handleSubmit} className="gov-card p-6 space-y-6 text-sm" noValidate>
+        <p className="text-xs text-slate-500 border-b border-line pb-2">
+          Fields marked * are mandatory. Please review each section thoroughly before submitting.
+        </p>
+
         {/* Step 1: Candidate Verification */}
         <div className="space-y-3">
-          <h3 className="font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1.5 flex items-center justify-between">
-            <span>1. Candidate Dossier Verification</span>
-            <span className="font-mono text-blue-900">{candidate?.candidate_number}</span>
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded border border-slate-200/80">
+          <h2 className="gov-section-title !text-sm">1. Candidate Dossier Verification</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded border border-line text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Full Name</span>
-              <span className="font-bold text-slate-800">{candidate?.full_name}</span>
+              <span className="text-slate-500 block uppercase font-medium">Full Legal Name</span>
+              <span className="font-bold text-gov-900 mt-0.5 block">{candidate?.full_name}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Category</span>
-              <span className="font-bold text-slate-800">{candidate?.category}</span>
+              <span className="text-slate-500 block uppercase font-medium">Candidate No.</span>
+              <span className="font-mono font-bold text-gov-800 mt-0.5 block">{candidate?.candidate_number}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Gender</span>
-              <span className="font-bold text-slate-800">{candidate?.gender}</span>
+              <span className="text-slate-500 block uppercase font-medium">Social Category</span>
+              <span className="font-bold text-gov-900 mt-0.5 block">{candidate?.category}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Phone</span>
-              <span className="font-bold text-slate-800">{candidate?.phone_number}</span>
+              <span className="text-slate-500 block uppercase font-medium">Contact Phone</span>
+              <span className="font-bold text-gov-900 mt-0.5 block">{candidate?.phone_number}</span>
             </div>
           </div>
         </div>
 
-        {/* Step 2: Educational Qualifications Summary */}
+        {/* Step 2: Academic Eligibility Verification */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-            <h3 className="font-bold text-slate-800 uppercase tracking-wider">
-              2. Academic Eligibility Verification
-            </h3>
-            <Link to="/candidate/qualifications" className="text-blue-900 hover:underline font-semibold text-[11px]">
+          <div className="flex items-center justify-between">
+            <h2 className="gov-section-title !text-sm !mb-0">2. Academic Eligibility Verification</h2>
+            <Link to="/candidate/qualifications" className="gov-link text-xs font-semibold">
               Manage Qualifications
             </Link>
           </div>
           {(!candidate?.qualifications || candidate.qualifications.length === 0) ? (
-            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded">
+            <div className="p-3 bg-amber-50 border border-saffron-500/40 text-amber-900 rounded text-xs">
               Warning: You have no recorded educational qualifications. Please add at least one qualification in your profile before applying.
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {candidate.qualifications.map((q, idx) => (
-                <div key={idx} className="p-2.5 rounded bg-slate-50 border border-slate-200 flex justify-between items-center text-xs">
+                <div key={idx} className="p-3 rounded bg-slate-50 border border-line flex justify-between items-center text-xs">
                   <div>
-                    <strong>{q.qualification_level}</strong> — {q.institution_name} ({q.board_or_university})
+                    <strong className="text-gov-800">{q.qualification_level}</strong> — {q.institution_name} ({q.board_or_university})
                   </div>
-                  <div className="font-semibold text-blue-900">
-                    {q.percentage}% ({q.passing_year})
+                  <div className="font-semibold text-gov-700">
+                    {q.percentage}% (Year: {q.passing_year})
                   </div>
                 </div>
               ))}
@@ -166,41 +171,39 @@ export const ApplyExam = () => {
 
         {/* Step 3: Examination Selection */}
         <div className="space-y-3">
-          <h3 className="font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1.5">
-            3. Select Examination Notice
-          </h3>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Target Examination *</label>
+          <h2 className="gov-section-title !text-sm">3. Examination Notice & Fee Schedule</h2>
+          <FormField label="Target Recruitment Examination" htmlFor="exam_select" required>
             <select
+              id="exam_select"
               value={selectedExamId}
               onChange={(e) => setSelectedExamId(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white font-medium"
+              className="gov-input font-medium"
             >
               {exams.map((e) => (
-                <option key={e.examination_id} value={e.examination_id}>
-                  {e.examination_code} - {e.examination_name} ({e.conducting_authority})
+                <option key={e.examination_id || e.id} value={e.examination_id || e.id}>
+                  {e.examination_code} - {e.examination_name} ({e.conducting_authority || 'Central Recruitment Commission'})
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
 
           {selectedExam && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-blue-50/60 p-3.5 rounded border border-blue-200 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gov-50 p-4 rounded border border-line text-xs">
               <div>
-                <span className="text-slate-500 block text-[11px]">Vacancies:</span>
-                <span className="font-bold text-slate-900">{selectedExam.total_vacancies.toLocaleString()}</span>
+                <span className="text-slate-500 block uppercase font-medium">Total Vacancies</span>
+                <span className="font-bold text-gov-900 mt-0.5 block">{selectedExam.total_vacancies?.toLocaleString() ?? '—'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[11px]">Exam Date:</span>
-                <span className="font-bold text-slate-900">{formatDate(selectedExam.examination_date)}</span>
+                <span className="text-slate-500 block uppercase font-medium">Exam Date</span>
+                <span className="font-bold text-gov-900 mt-0.5 block">{formatDate(selectedExam.examination_date)}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[11px]">Deadline:</span>
-                <span className="font-bold text-slate-900">{formatDate(selectedExam.application_end_date)}</span>
+                <span className="text-slate-500 block uppercase font-medium">Apply Deadline</span>
+                <span className="font-bold text-gov-900 mt-0.5 block">{formatDate(selectedExam.application_end_date)}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[11px]">Exam Fee:</span>
-                <span className="font-bold text-emerald-800">{formatCurrency(selectedExam.application_fee)}</span>
+                <span className="text-slate-500 block uppercase font-medium">Application Fee</span>
+                <span className="font-bold text-india-green mt-0.5 block">{formatCurrency(selectedExam.application_fee)}</span>
               </div>
             </div>
           )}
@@ -208,39 +211,39 @@ export const ApplyExam = () => {
 
         {/* Step 4: Preferred Examination Center Selection */}
         <div className="space-y-3">
-          <h3 className="font-bold text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-1.5">
-            4. Preferred Test Center Venue
-          </h3>
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Select Center Venue *</label>
+          <h2 className="gov-section-title !text-sm">4. Preferred Test Center Venue</h2>
+          <FormField
+            label="Select Center Venue"
+            htmlFor="center_select"
+            required
+            hint="Final venue assignment and seating slot will be confirmed on the official Admit Card."
+          >
             <select
+              id="center_select"
               value={selectedCenterId}
               onChange={(e) => setSelectedCenterId(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 outline-none bg-white"
+              className="gov-input"
             >
               {centers.map((c) => (
                 <option key={c.center_id} value={c.center_id}>
-                  {c.center_name} — {c.city}, {c.state} (Capacity: {c.total_capacity})
+                  {c.center_name} — {c.city}, {c.state} (Capacity: {c.total_capacity} seats)
                 </option>
               ))}
             </select>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Final venue assignment and seating slot will be confirmed on the official Admit Card issued by the commission.
-            </p>
-          </div>
+          </FormField>
         </div>
 
         {/* Step 5: Declaration & Submission */}
-        <div className="pt-2 border-t border-slate-200 space-y-3">
-          <label className="flex items-start space-x-2.5 cursor-pointer">
+        <div className="pt-4 border-t border-line space-y-4">
+          <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={declaration}
               onChange={(e) => setDeclaration(e.target.checked)}
-              className="mt-0.5 rounded text-blue-900 focus:ring-blue-900"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-gov-700 focus:ring-saffron-500"
             />
-            <span className="text-xs text-slate-600 leading-relaxed">
-              I hereby certify that all information submitted in this application is authentic, accurate, and verifiable. I understand that duplicate applications or false declarations will lead to disqualification under public examination rules.
+            <span className="text-xs text-slate-700 leading-relaxed">
+              I hereby solemnly declare that all statements made in this online application are true, complete, and correct to the best of my knowledge and belief. I understand that duplicate applications or false declarations will lead to summary cancellation of my candidature under public examination rules.
             </span>
           </label>
 
@@ -248,7 +251,7 @@ export const ApplyExam = () => {
             <button
               type="submit"
               disabled={submitting || !declaration}
-              className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition disabled:opacity-50"
+              className="gov-btn gov-btn-primary"
             >
               {submitting ? 'Submitting Application...' : 'Confirm & Submit Application'}
             </button>
@@ -257,7 +260,6 @@ export const ApplyExam = () => {
       </form>
     </div>
   );
-};
+}
 
 export default ApplyExam;
-

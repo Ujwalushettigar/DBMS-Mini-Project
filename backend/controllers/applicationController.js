@@ -95,7 +95,7 @@ const updateApplicationStatus = async (req, res, next) => {
       application_status,
       center_id,
       remarks
-    });
+    }, req.user?.role);
 
     if (!updated) {
       return errorResponse(res, 'Application not found.', 404);

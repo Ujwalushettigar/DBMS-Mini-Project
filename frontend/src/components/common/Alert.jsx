@@ -1,48 +1,38 @@
 import React from 'react';
-import { AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { Info, CheckCircle2, AlertTriangle, XCircle, X } from 'lucide-react';
 
-export const Alert = ({ type = 'info', title, message, onClose }) => {
-  const configs = {
-    info: {
-      bg: 'bg-blue-50 border-blue-200 text-blue-800',
-      icon: Info,
-      iconColor: 'text-blue-600'
-    },
-    success: {
-      bg: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-      icon: CheckCircle2,
-      iconColor: 'text-emerald-600'
-    },
-    warning: {
-      bg: 'bg-amber-50 border-amber-200 text-amber-800',
-      icon: AlertTriangle,
-      iconColor: 'text-amber-600'
-    },
-    error: {
-      bg: 'bg-rose-50 border-rose-200 text-rose-800',
-      icon: AlertCircle,
-      iconColor: 'text-rose-600'
-    }
-  };
+const cfg = {
+  info: { cls: 'border-gov-400 bg-gov-50 text-gov-800', Icon: Info },
+  success: { cls: 'border-india-green bg-green-50 text-green-900', Icon: CheckCircle2 },
+  warning: { cls: 'border-saffron-500 bg-orange-50 text-orange-900', Icon: AlertTriangle },
+  error: { cls: 'border-red-500 bg-red-50 text-red-900', Icon: XCircle },
+  danger: { cls: 'border-red-500 bg-red-50 text-red-900', Icon: XCircle },
+};
 
-  const config = configs[type] || configs.info;
-  const Icon = config.icon;
+export function Alert({ type = 'info', title, message, children, onClose }) {
+  const normalizedType = type === 'danger' ? 'error' : type;
+  const { cls, Icon } = cfg[normalizedType] ?? cfg.info;
+  const body = children !== undefined ? children : message;
 
   return (
-    <div className={`p-4 rounded-lg border flex items-start space-x-3 ${config.bg}`}>
-      <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${config.iconColor}`} />
-      <div className="flex-1 text-sm">
-        {title && <h5 className="font-semibold mb-0.5">{title}</h5>}
-        <div>{message}</div>
+    <div role={normalizedType === 'error' ? 'alert' : 'status'} className={`flex items-start gap-3 rounded border-l-4 p-3 text-sm ${cls}`}>
+      <Icon size={18} className="mt-0.5 shrink-0" />
+      <div className="flex-1">
+        {title && <p className="font-semibold mb-0.5">{title}</p>}
+        <div>{body}</div>
       </div>
       {onClose && (
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-          &times;
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Dismiss"
+          className="hover:opacity-75 transition text-inherit"
+        >
+          <X size={16} />
         </button>
       )}
     </div>
   );
-};
+}
 
 export default Alert;
-

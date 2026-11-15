@@ -6,9 +6,10 @@ import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { EmptyState } from '../components/common/EmptyState';
 import { Modal } from '../components/common/Modal';
-import { FileText, Eye, CreditCard, Award, ArrowRight, Building } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
+import { FileText, Eye, Building2, Plus } from 'lucide-react';
 
-export const MyApplications = () => {
+export function MyApplications() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState(null);
@@ -35,83 +36,96 @@ export const MyApplications = () => {
     setModalOpen(true);
   };
 
-  if (loading) return <LoadingSpinner message="Retrieving your submitted applications..." />;
+  if (loading) return <LoadingSpinner label="Retrieving your submitted applications..." />;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">My Examination Applications</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Track online submission status, scrutiny reviews, venue allocations, and hall tickets.
-          </p>
-        </div>
-        <Link
-          to="/candidate/examinations"
-          className="inline-flex items-center space-x-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
-        >
-          <span>Apply for New Exam</span>
-        </Link>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="My Examination Applications"
+        subtitle="Track submitted applications, scrutiny verification status, assigned test centers, and admit card issuance"
+        crumbs={[{ label: 'Dashboard', to: '/candidate/dashboard' }, { label: 'My Applications' }]}
+        actions={
+          <Link
+            to="/candidate/examinations"
+            className="gov-btn gov-btn-accent text-xs"
+          >
+            <Plus size={16} />
+            <span>Apply for New Exam</span>
+          </Link>
+        }
+      />
 
-      {applications.length === 0 ? (
-        <EmptyState
-          title="No applications submitted yet"
-          description="You have not submitted applications for any ongoing recruitment examinations."
-          icon={FileText}
-          action={
-            <Link
-              to="/candidate/examinations"
-              className="px-4 py-2 bg-blue-900 text-white rounded text-xs font-semibold hover:bg-blue-800 inline-block"
-            >
-              Browse Open Examinations
-            </Link>
-          }
-        />
-      ) : (
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <FileText size={18} />
+            <span>Submitted Applications Register</span>
+          </div>
+          <span className="text-xs text-slate-500 font-normal">
+            Total records: <strong>{applications.length}</strong>
+          </span>
+        </div>
+
+        {applications.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title="No applications submitted yet"
+              message="You have not submitted applications for any ongoing recruitment examinations."
+              icon={FileText}
+              action={
+                <Link
+                  to="/candidate/examinations"
+                  className="gov-btn gov-btn-primary text-xs"
+                >
+                  Browse Open Examinations
+                </Link>
+              }
+            />
+          </div>
+        ) : (
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">App Number</th>
-                  <th className="px-6 py-3">Examination Details</th>
-                  <th className="px-6 py-3">Applied Date</th>
-                  <th className="px-6 py-3">Exam Center</th>
-                  <th className="px-6 py-3">Payment</th>
-                  <th className="px-6 py-3">Application Status</th>
-                  <th className="px-6 py-3 text-right">Details</th>
+                  <th>Application No.</th>
+                  <th>Examination Details</th>
+                  <th>Submission Date</th>
+                  <th>Designated Center</th>
+                  <th>Fee Status</th>
+                  <th>Scrutiny Status</th>
+                  <th className="text-right">Dossier</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody>
                 {applications.map((app) => (
-                  <tr key={app.application_id} className="hover:bg-slate-50/70">
-                    <td className="px-6 py-4 font-mono font-bold text-blue-950">
+                  <tr key={app.application_id}>
+                    <td className="whitespace-nowrap font-mono text-xs font-bold text-gov-900">
                       {app.application_number}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{app.examination?.examination_name}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{app.examination?.examination_code}</div>
+                    <td>
+                      <div className="font-semibold text-gov-800">{app.examination?.examination_name}</div>
+                      <div className="text-[11px] font-mono text-slate-500">{app.examination?.examination_code}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="whitespace-nowrap text-slate-600">
                       {formatDate(app.applied_at)}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="text-slate-600">
                       {app.exam_center ? `${app.exam_center.center_name}` : 'Pending Allocation'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td>
                       <Badge>{app.payment_status}</Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td>
                       <Badge>{app.application_status}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="text-right whitespace-nowrap">
                       <button
+                        type="button"
                         onClick={() => openDetails(app)}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 text-slate-700 font-medium"
+                        className="gov-btn gov-btn-outline !py-1 !px-2.5 text-xs"
+                        aria-label={`View details of application ${app.application_number}`}
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye size={14} />
                         <span>View</span>
                       </button>
                     </td>
@@ -120,75 +134,80 @@ export const MyApplications = () => {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Application Details Modal */}
       <Modal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Application Submission Dossier"
       >
         {selectedApp && (
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded border border-slate-200">
+            <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded border border-line">
               <div>
-                <span className="text-slate-400 block text-[11px]">Application Tracking Number</span>
-                <span className="font-mono font-bold text-slate-900">{selectedApp.application_number}</span>
+                <span className="text-slate-500 block uppercase text-[10px] font-semibold">Tracking Number</span>
+                <span className="font-mono font-bold text-gov-900 text-sm">{selectedApp.application_number}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Submission Date & Time</span>
+                <span className="text-slate-500 block uppercase text-[10px] font-semibold">Submission Timestamp</span>
                 <span className="font-semibold text-slate-800">{new Date(selectedApp.applied_at).toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Application Status</span>
+                <span className="text-slate-500 block uppercase text-[10px] font-semibold mb-1">Application Status</span>
                 <Badge>{selectedApp.application_status}</Badge>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Payment Status</span>
+                <span className="text-slate-500 block uppercase text-[10px] font-semibold mb-1">Fee Payment Status</span>
                 <Badge>{selectedApp.payment_status}</Badge>
               </div>
             </div>
 
-            <div className="space-y-2 border-t border-slate-200 pt-3">
-              <h4 className="font-bold text-slate-800 uppercase tracking-wider">Examination Information</h4>
-              <p className="font-semibold text-slate-900 text-sm">{selectedApp.examination?.examination_name}</p>
+            <div className="space-y-2 border-t border-line pt-3">
+              <h3 className="font-bold text-gov-800 uppercase tracking-wider text-xs">Examination Specification</h3>
+              <p className="font-semibold text-gov-900 text-sm">{selectedApp.examination?.examination_name}</p>
               <div className="grid grid-cols-2 gap-2 text-slate-600">
-                <div>Exam Code: <strong>{selectedApp.examination?.examination_code}</strong></div>
+                <div>Exam Code: <strong className="font-mono">{selectedApp.examination?.examination_code}</strong></div>
                 <div>Exam Date: <strong>{formatDate(selectedApp.examination?.examination_date)}</strong></div>
-                <div>Authority: <strong>{selectedApp.examination?.conducting_authority}</strong></div>
-                <div>Vacancies: <strong>{selectedApp.examination?.total_vacancies?.toLocaleString()}</strong></div>
+                <div>Authority: <strong>{selectedApp.examination?.conducting_authority || 'Central Recruitment Commission'}</strong></div>
+                <div>Total Posts: <strong>{selectedApp.examination?.total_vacancies?.toLocaleString() ?? '—'}</strong></div>
               </div>
             </div>
 
-            <div className="space-y-2 border-t border-slate-200 pt-3">
-              <h4 className="font-bold text-slate-800 uppercase tracking-wider">Assigned Examination Center</h4>
+            <div className="space-y-2 border-t border-line pt-3">
+              <h3 className="font-bold text-gov-800 uppercase tracking-wider text-xs">Assigned Examination Center</h3>
               {selectedApp.exam_center ? (
-                <div className="p-2.5 rounded bg-slate-50 border border-slate-200 text-slate-700 space-y-0.5">
-                  <div className="font-semibold text-slate-900">{selectedApp.exam_center.center_name}</div>
-                  <div className="text-[11px] text-slate-500">{selectedApp.exam_center.address}, {selectedApp.exam_center.city}, {selectedApp.exam_center.state} - {selectedApp.exam_center.pincode}</div>
+                <div className="p-3 rounded bg-slate-50 border border-line text-slate-700 space-y-0.5">
+                  <div className="font-semibold text-gov-900 flex items-center gap-1.5">
+                    <Building2 size={14} className="text-gov-700" />
+                    <span>{selectedApp.exam_center.center_name}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {selectedApp.exam_center.address}, {selectedApp.exam_center.city}, {selectedApp.exam_center.state} - {selectedApp.exam_center.pincode}
+                  </div>
                 </div>
               ) : (
-                <p className="text-slate-500 italic">No center allocated yet. A center will be designated during application review.</p>
+                <p className="text-slate-500 italic">No center allocated yet. A venue will be designated during application scrutiny.</p>
               )}
             </div>
 
             {selectedApp.remarks && (
-              <div className="space-y-1 border-t border-slate-200 pt-3">
-                <h4 className="font-bold text-slate-800 uppercase tracking-wider">Scrutiny / Review Remarks</h4>
-                <p className="p-2 rounded bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+              <div className="space-y-1 border-t border-line pt-3">
+                <h3 className="font-bold text-gov-800 uppercase tracking-wider text-xs">Scrutiny / Review Remarks</h3>
+                <p className="p-2.5 rounded bg-amber-50 border border-saffron-500/40 text-amber-900 text-xs">
                   {selectedApp.remarks}
                 </p>
               </div>
             )}
 
-            <div className="pt-3 border-t border-slate-200 flex justify-end">
+            <div className="pt-3 border-t border-line flex justify-end">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-slate-800 font-semibold"
+                className="gov-btn gov-btn-outline text-xs"
               >
-                Close
+                Close Dossier
               </button>
             </div>
           </div>
@@ -196,7 +215,6 @@ export const MyApplications = () => {
       </Modal>
     </div>
   );
-};
+}
 
 export default MyApplications;
-

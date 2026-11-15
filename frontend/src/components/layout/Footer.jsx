@@ -1,78 +1,48 @@
 import React from 'react';
-import { Building2, Database, Shield, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { heroImage } from '../../data/imageCredits';
 
-export const Footer = () => {
+export function Footer() {
+  const year = new Date().getFullYear();
+  const linkCls = 'text-slate-300 hover:text-white hover:underline focus:outline-none focus:ring-1 focus:ring-saffron-500 rounded';
   return (
-    <footer className="bg-slate-900 text-slate-400 text-xs border-t border-slate-800 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Identity */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2 text-white font-bold text-sm">
-              <Building2 className="w-5 h-5 text-blue-500" />
-              <span>GREMS PORTAL</span>
-            </div>
-            <p className="text-slate-400 leading-relaxed text-xs">
-              Academic DBMS Mini Project. Centralized relational platform for managing public examination notices, candidate verification, center allocation, and merit evaluation.
-            </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-3 flex items-center space-x-1.5">
-              <Shield className="w-4 h-4 text-amber-400" />
-              <span>Portal Navigation</span>
-            </h4>
-            <ul className="space-y-1.5 text-slate-400">
-              <li><Link to="/" className="hover:text-white transition">Home</Link></li>
-              <li><Link to="/about" className="hover:text-white transition">About Portal</Link></li>
-              <li><Link to="/examinations" className="hover:text-white transition">Available Examinations</Link></li>
-              <li><Link to="/login" className="hover:text-white transition">Sign In</Link></li>
-              <li><Link to="/register" className="hover:text-white transition">Candidate Registration</Link></li>
-            </ul>
-          </div>
-
-          {/* Relational Features */}
-          <div>
-            <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-3 flex items-center space-x-1.5">
-              <Database className="w-4 h-4 text-emerald-400" />
-              <span>Database Highlights</span>
-            </h4>
-            <ul className="space-y-1.5 text-slate-400">
-              <li>• PostgreSQL 15+ (Supabase)</li>
-              <li>• Normalized 9-Table Schema (3NF)</li>
-              <li>• Composite PK & Unique Constraints</li>
-              <li>• Row Level Security (RLS)</li>
-            </ul>
-          </div>
-
-          {/* Academic Notice */}
-          <div>
-            <h4 className="text-white font-semibold text-xs uppercase tracking-wider mb-3 flex items-center space-x-1.5">
-              <Award className="w-4 h-4 text-blue-400" />
-              <span>Academic Notice</span>
-            </h4>
-            <p className="text-slate-400 leading-relaxed text-xs">
-              Developed strictly for academic demonstration and laboratory viva evaluation. Uses fictional institutional branding. No official government affiliation.
-            </p>
-          </div>
+    <footer className="no-print mt-10 bg-gov-900 text-slate-200">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 md:grid-cols-3">
+        <div>
+          <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-white">About GREMS</h3>
+          <p className="text-sm text-slate-300">
+            A full-stack DBMS mini project that models the recruitment lifecycle: notification, application,
+            scrutiny, admit card, evaluation and merit ranking.
+          </p>
         </div>
-
-        <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center text-slate-500">
-          <p>© {new Date().getFullYear()} Government Recruitment Examination Management System (GREMS).</p>
-          <div className="flex space-x-3 mt-2 sm:mt-0 text-slate-400">
-            <span>React + Vite</span>
-            <span>•</span>
-            <span>Node.js / Express</span>
-            <span>•</span>
-            <span>PostgreSQL Supabase</span>
-          </div>
+        <div>
+          <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-white">Quick Links</h3>
+          <ul className="space-y-1 text-sm">
+            <li><Link className={linkCls} to="/">Home</Link></li>
+            <li><Link className={linkCls} to="/about">About GREMS</Link></li>
+            <li><Link className={linkCls} to="/examinations">Examinations</Link></li>
+            <li><Link className={linkCls} to="/login">Candidate / Admin Login</Link></li>
+            <li><Link className={linkCls} to="/register">New Registration</Link></li>
+          </ul>
         </div>
+        <div>
+          <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-white">Help Desk</h3>
+          <p className="text-sm text-slate-300">helpdesk@grems.example</p>
+          <p className="text-sm text-slate-300">1800-000-0000 (demo number)</p>
+          <p className="text-sm text-slate-300">Mon-Fri, 10:00 AM - 5:00 PM</p>
+        </div>
+      </div>
+      <div className="border-t border-white/10 px-4 py-3 text-center text-xs text-slate-400">
+        <p>&copy; {year} GREMS. College DBMS mini project. This is a demonstration system and not an official government website.</p>
+        <p className="mt-1">
+          Home page photo &ldquo;{heroImage.title}&rdquo; by {heroImage.author},{' '}
+          <a className="underline hover:text-white" href={heroImage.sourceUrl} target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>,
+          licensed under{' '}
+          <a className="underline hover:text-white" href={heroImage.licenseUrl} target="_blank" rel="noopener noreferrer">{heroImage.license}</a>.
+        </p>
       </div>
     </footer>
   );
-};
+}
 
 export default Footer;
-

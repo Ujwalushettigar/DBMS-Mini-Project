@@ -1,9 +1,12 @@
 # REST API Specification Document
 ## Government Recruitment Examination Management System (GREMS)
 
-- **Base URL**: `http://localhost:5000/api`
+- **Backend Base URL**: `http://localhost:5000/api`
+- **Frontend Port & Proxy**: Vite dev server runs at `http://localhost:3000` and transparently proxies `/api/*` to `http://localhost:5000/api/*`.
 - **Content-Type**: `application/json`
-- **Authentication**: Bearer JWT token obtained from Supabase Auth passed in header: `Authorization: Bearer <TOKEN>`
+- **Authentication**: Bearer JWT token passed in standard header: `Authorization: Bearer <TOKEN>`
+  - **Live Supabase Mode**: Issues Supabase Auth session access token; verified using `supabase.auth.getUser(token)` and Row Level Security policies.
+  - **In-Memory Evaluation Mode**: Issues backend HMAC-SHA256 JWT signed with `JWT_SECRET` (configured in `backend/.env`); validated using `jwt.verify`.
 
 ---
 

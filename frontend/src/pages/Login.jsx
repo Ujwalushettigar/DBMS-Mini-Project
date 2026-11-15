@@ -1,133 +1,146 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { LogIn, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Building2, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Alert } from '../components/common/Alert';
+import { FormField } from '../components/common/FormField';
+import { PageHeader } from '../components/common/PageHeader';
 
-export const Login = () => {
+export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-
+    setSubmitting(true);
     try {
       const user = await login(email, password);
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/candidate/dashboard');
-      }
+      const role = user?.role;
+      navigate(role === 'admin' ? '/admin/dashboard' : '/candidate/dashboard');
     } catch (err) {
-      setError(err.message || 'Authentication failed. Please verify credentials.');
+      setError(err?.response?.data?.message || err?.message || 'Login failed. Please check your credentials.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const setTestAccount = (testEmail, testRole) => {
-    setEmail(testEmail);
-    setPassword('Password@123');
+  const fillCredentials = (demoEmail, demoPass) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
   };
 
   return (
-    <div className="max-w-md mx-auto py-12 px-4">
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded bg-blue-900 text-white flex items-center justify-center mx-auto shadow-sm">
-            <Building2 className="w-6 h-6" />
-          </div>
-          <h1 className="text-xl font-bold text-slate-900">Portal Authentication</h1>
-          <p className="text-xs text-slate-500">Sign in with your registered candidate or admin account</p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Candidate & Official Login"
+        subtitle="Sign in with your registered credentials to access recruitment services"
+        crumbs={[{ label: 'Login' }]}
+      />
 
-        {error && (
-          <div className="p-3.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start space-x-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+      <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-5">
+        <section className="gov-card md:col-span-2 flex flex-col justify-between">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Official / Registered Email</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <h2 className="gov-card-header !text-base">
+              <Info size={18} /> Instructions for Sign In
+            </h2>
+            <ul className="list-disc space-y-1.5 px-8 py-4 text-sm text-slate-700">
+              <li>Use the email address you registered with.</li>
+              <li>New candidates must register before logging in.</li>
+              <li>Never share your credentials with anyone.</li>
+              <li>Log out after use on public/shared terminals.</li>
+            </ul>
+          </div>
+
+          <details className="border-t border-line px-4 py-3 text-xs text-slate-600" open>
+            <summary className="cursor-pointer font-semibold text-gov-700">
+              Demo Credentials (Academic Evaluation)
+            </summary>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded border border-line">
+                <div>
+                  <p className="font-semibold text-gov-800">Admin Account</p>
+                  <p className="text-[11px] text-slate-500 font-mono">admin@gov.in</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fillCredentials('admin@gov.in', 'Admin@123')}
+                  className="gov-btn gov-btn-outline !py-1 !px-2 text-xs"
+                >
+                  Use
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded border border-line">
+                <div>
+                  <p className="font-semibold text-gov-800">Candidate Account</p>
+                  <p className="text-[11px] text-slate-500 font-mono">rahul.sharma@example.com</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fillCredentials('rahul.sharma@example.com', 'Candidate@123')}
+                  className="gov-btn gov-btn-outline !py-1 !px-2 text-xs"
+                >
+                  Use
+                </button>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <section className="gov-card md:col-span-3">
+          <h1 className="gov-card-header !text-lg">
+            <LogIn size={20} /> Login
+          </h1>
+          <form onSubmit={onSubmit} className="space-y-4 p-5" noValidate>
+            <p className="text-xs text-slate-500">Fields marked * are mandatory</p>
+            {error && <Alert type="error">{error}</Alert>}
+
+            <FormField label="Email address" htmlFor="email" required>
               <input
+                id="email"
                 type="email"
-                required
+                autoComplete="username"
+                className="gov-input"
+                placeholder="registered.email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 focus:border-blue-900 outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Password</label>
-            <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="password"
                 required
+              />
+            </FormField>
+
+            <FormField label="Password" htmlFor="password" required>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                className="gov-input"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-900 focus:border-blue-900 outline-none"
+                required
               />
-            </div>
-          </div>
+            </FormField>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-semibold rounded shadow-sm text-xs transition disabled:opacity-50"
-          >
-            {loading ? 'Authenticating...' : 'Sign In to Portal'}
-          </button>
-        </form>
-
-        {/* Academic Viva Demo Quick Fill */}
-        <div className="pt-4 border-t border-slate-200 space-y-2 text-xs">
-          <p className="text-slate-500 font-semibold text-[11px] uppercase tracking-wider text-center">
-            DBMS Evaluation Quick Sign-In
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setTestAccount('admin.recruitment@gov.in', 'admin')}
-              className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 rounded text-[11px] text-slate-700 font-medium text-center"
-            >
-              Sign In as Admin
+            <button type="submit" disabled={submitting} className="gov-btn gov-btn-primary w-full">
+              {submitting ? 'Signing in...' : 'Login'}
             </button>
-            <button
-              type="button"
-              onClick={() => setTestAccount('rohan.sharma@example.com', 'candidate')}
-              className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-50 rounded text-[11px] text-slate-700 font-medium text-center"
-            >
-              Sign In as Candidate
-            </button>
-          </div>
-        </div>
 
-        <div className="text-center text-xs text-slate-500">
-          New candidate aspirant?{' '}
-          <Link to="/register" className="text-blue-900 font-semibold hover:underline">
-            Register here
-          </Link>
-        </div>
+            <p className="text-center text-sm text-slate-600">
+              New candidate?{' '}
+              <Link to="/register" className="gov-link font-semibold">
+                Create an account
+              </Link>
+            </p>
+          </form>
+        </section>
       </div>
     </div>
   );
-};
+}
 
 export default Login;
-

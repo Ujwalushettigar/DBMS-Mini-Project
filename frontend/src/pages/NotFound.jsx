@@ -1,28 +1,36 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Home } from 'lucide-react';
+import { Home, AlertTriangle } from 'lucide-react';
+import { PageHeader } from '../components/common/PageHeader';
 
-export const NotFound = () => {
+export function NotFound() {
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-      <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-        <Building2 className="w-8 h-8 text-blue-900" />
+    <div className="space-y-6">
+      <PageHeader
+        title="404 - Page Not Found"
+        crumbs={[{ label: 'Not Found' }]}
+      />
+
+      <div className="gov-card max-w-lg mx-auto p-8 text-center space-y-4">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-saffron-500/10 text-saffron-600 mx-auto">
+          <AlertTriangle size={36} />
+        </span>
+        <h2 className="text-3xl font-bold text-gov-800">404</h2>
+        <p className="text-sm font-semibold text-slate-700">Requested Portal Resource Not Found</p>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          The requested URL does not match any active route or document on this recruitment management portal.
+        </p>
+        <div className="pt-2">
+          <Link
+            to="/"
+            className="gov-btn gov-btn-primary"
+          >
+            <Home size={16} /> Return to Home
+          </Link>
+        </div>
       </div>
-      <h1 className="text-4xl font-extrabold text-slate-900">404</h1>
-      <h2 className="text-lg font-bold text-slate-800">Page Not Found</h2>
-      <p className="text-xs text-slate-500 max-w-sm">
-        The requested portal page does not exist or has been relocated by the recruitment board.
-      </p>
-      <Link
-        to="/"
-        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
-      >
-        <Home className="w-4 h-4" />
-        <span>Return to Home</span>
-      </Link>
     </div>
   );
-};
+}
 
 export default NotFound;
-

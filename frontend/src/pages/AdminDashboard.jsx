@@ -4,6 +4,8 @@ import { dashboardAPI } from '../services/api';
 import { StatsCard } from '../components/common/StatsCard';
 import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { formatDate } from '../utils/helpers';
 import {
   Users,
@@ -12,12 +14,13 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Building,
+  Building2,
   Award,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from 'lucide-react';
 
-export const AdminDashboard = () => {
+export function AdminDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,147 +40,142 @@ export const AdminDashboard = () => {
     fetchDashboard();
   }, []);
 
-  if (loading) return <LoadingSpinner message="Loading administrative metrics from PostgreSQL..." />;
+  if (loading) return <LoadingSpinner label="Loading administrative metrics from PostgreSQL..." />;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold text-blue-900 uppercase tracking-wider block">
-            Administrative Control Console
-          </span>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-0.5">
-            Recruitment Operations Overview
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Real-time PostgreSQL database aggregates across all 9 relational entities.
-          </p>
-        </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Recruitment Operations Overview"
+        subtitle="Real-time administrative telemetry and database aggregates across all 9 relational entities"
+        crumbs={[{ label: 'Dashboard' }]}
+        actions={
+          <div className="flex gap-2">
+            <Link
+              to="/admin/examinations"
+              className="gov-btn gov-btn-accent text-xs"
+            >
+              <Plus size={14} />
+              <span>New Examination</span>
+            </Link>
+            <Link
+              to="/admin/applications"
+              className="gov-btn gov-btn-outline text-xs"
+            >
+              Review Applications
+            </Link>
+          </div>
+        }
+      />
 
-        <div className="flex space-x-2">
-          <Link
-            to="/admin/examinations"
-            className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded text-xs font-semibold shadow-sm transition"
-          >
-            Create Examination
-          </Link>
-          <Link
-            to="/admin/applications"
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded text-xs font-semibold transition"
-          >
-            Review Applications
-          </Link>
-        </div>
-      </div>
-
-      {/* KPI Stats Grid (Row 1) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Grid - Row 1 */}
+      <section aria-label="Primary recruitment metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Registered Candidates"
           value={data?.total_candidates ?? 0}
           icon={Users}
-          color="blue"
-          description="Aspirant dossiers"
+          tone="blue"
+          hint="Candidate dossiers"
         />
         <StatsCard
           title="Published Examinations"
           value={data?.total_examinations ?? 0}
           icon={Layers}
-          color="purple"
-          description="Competitive notifications"
+          tone="purple"
+          hint="Active notices"
         />
         <StatsCard
           title="Total Applications"
           value={data?.total_applications ?? 0}
           icon={FileText}
-          color="blue"
-          description="Submitted entries"
+          tone="blue"
+          hint="Submissions filed"
         />
         <StatsCard
           title="Pending Scrutiny"
           value={data?.pending_applications ?? 0}
           icon={Clock}
-          color="amber"
-          description="Awaiting review"
+          tone="saffron"
+          hint="Awaiting verification"
         />
-      </div>
+      </section>
 
-      {/* KPI Stats Grid (Row 2) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Grid - Row 2 */}
+      <section aria-label="Secondary recruitment metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Accepted Applications"
           value={data?.accepted_applications ?? 0}
           icon={CheckCircle2}
-          color="green"
-          description="Eligible for exam"
+          tone="green"
+          hint="Eligible for admit card"
         />
         <StatsCard
           title="Rejected Applications"
           value={data?.rejected_applications ?? 0}
           icon={XCircle}
-          color="red"
-          description="Ineligible"
+          tone="red"
+          hint="Ineligible / Disqualified"
         />
         <StatsCard
           title="Examination Centers"
           value={data?.total_centers ?? 0}
-          icon={Building}
-          color="slate"
-          description="Accredited venues"
+          icon={Building2}
+          tone="slate"
+          hint="Venues configured"
         />
         <StatsCard
           title="Results Published"
           value={data?.results_published ?? 0}
           icon={Award}
-          color="green"
-          description="Declared merit lists"
+          tone="green"
+          hint="Declared merit rankings"
         />
-      </div>
+      </section>
 
       {/* Tables Row: Recent Applications & Upcoming Examinations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Applications */}
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+        <section className="gov-card">
+          <div className="gov-card-header justify-between">
+            <span className="font-bold text-xs uppercase tracking-wider">
               Recent Application Submissions
-            </h3>
+            </span>
             <Link
               to="/admin/applications"
-              className="text-xs font-semibold text-blue-900 hover:text-blue-700 flex items-center space-x-1"
+              className="gov-link text-xs font-semibold inline-flex items-center gap-1"
             >
               <span>Manage</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight size={14} />
             </Link>
           </div>
 
           {(!data?.recent_applications || data.recent_applications.length === 0) ? (
-            <div className="text-center py-8 text-xs text-slate-500">No applications received yet.</div>
+            <div className="p-4">
+              <EmptyState title="No applications received yet" message="Applications will appear here once candidates apply." />
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-semibold uppercase">
+            <div className="gov-table-wrap !border-0 !rounded-none">
+              <table className="gov-table">
+                <thead>
                   <tr>
-                    <th className="px-4 py-2.5">App Number</th>
-                    <th className="px-4 py-2.5">Candidate</th>
-                    <th className="px-4 py-2.5">Exam</th>
-                    <th className="px-4 py-2.5">Status</th>
+                    <th>App Number</th>
+                    <th>Candidate</th>
+                    <th>Exam</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
+                <tbody>
                   {data.recent_applications.map((app) => (
-                    <tr key={app.application_id} className="hover:bg-slate-50/70">
-                      <td className="px-4 py-3 font-mono font-medium text-blue-950">
+                    <tr key={app.application_id}>
+                      <td className="whitespace-nowrap font-mono text-xs font-semibold text-gov-800">
                         {app.application_number}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">
+                      <td className="font-semibold text-slate-800">
                         {app.candidate?.full_name || app.candidates?.full_name || 'Candidate'}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 font-mono">
+                      <td className="text-slate-600 font-mono text-xs">
                         {app.examination?.examination_code || app.examinations?.examination_code}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <Badge size="sm">{app.application_status}</Badge>
                       </td>
                     </tr>
@@ -186,46 +184,64 @@ export const AdminDashboard = () => {
               </table>
             </div>
           )}
-        </div>
+        </section>
 
         {/* Upcoming Examinations */}
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+        <section className="gov-card">
+          <div className="gov-card-header justify-between">
+            <span className="font-bold text-xs uppercase tracking-wider">
               Upcoming Active Examinations
-            </h3>
+            </span>
             <Link
               to="/admin/examinations"
-              className="text-xs font-semibold text-blue-900 hover:text-blue-700 flex items-center space-x-1"
+              className="gov-link text-xs font-semibold inline-flex items-center gap-1"
             >
               <span>Manage</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight size={14} />
             </Link>
           </div>
 
           {(!data?.upcoming_examinations || data.upcoming_examinations.length === 0) ? (
-            <div className="text-center py-8 text-xs text-slate-500">No active examinations published.</div>
+            <div className="p-4">
+              <EmptyState title="No active examinations published" message="Create an examination notice to publish schedules." />
+            </div>
           ) : (
-            <div className="divide-y divide-slate-200">
-              {data.upcoming_examinations.map((exam) => (
-                <div key={exam.examination_id} className="p-4 hover:bg-slate-50 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-mono font-bold text-blue-900 mr-2">{exam.examination_code}</span>
-                    <span className="font-semibold text-slate-900">{exam.examination_name}</span>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Exam Date: <strong>{formatDate(exam.examination_date)}</strong> • Vacancies: {exam.total_vacancies.toLocaleString()}
-                    </p>
-                  </div>
-                  <Badge size="sm">{exam.examination_status}</Badge>
-                </div>
-              ))}
+            <div className="gov-table-wrap !border-0 !rounded-none">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th>Notice Code</th>
+                    <th>Examination Name</th>
+                    <th>Exam Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.upcoming_examinations.map((exam) => (
+                    <tr key={exam.examination_id}>
+                      <td className="whitespace-nowrap font-mono text-xs font-bold text-gov-800">
+                        {exam.examination_code}
+                      </td>
+                      <td>
+                        <div className="font-semibold text-gov-900">{exam.examination_name}</div>
+                        <div className="text-[11px] text-slate-500">Vacancies: {Number(exam.total_vacancies).toLocaleString()}</div>
+                      </td>
+                      <td className="whitespace-nowrap text-slate-600">
+                        {formatDate(exam.examination_date)}
+                      </td>
+                      <td>
+                        <Badge size="sm">{exam.examination_status}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
-};
+}
 
 export default AdminDashboard;
-

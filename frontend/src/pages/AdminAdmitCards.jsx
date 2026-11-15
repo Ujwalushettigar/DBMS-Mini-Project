@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { admitCardAPI, examAPI } from '../services/api';
-import Badge from '../components/common/Badge';
-import Modal from '../components/common/Modal';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import Alert from '../components/common/Alert';
-import EmptyState from '../components/common/EmptyState';
+import { Badge } from '../components/common/Badge';
+import { Modal } from '../components/common/Modal';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { Alert } from '../components/common/Alert';
+import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { 
-  Award, Search, Printer, Calendar, Clock, MapPin, 
-  FileText, ShieldCheck, RefreshCw, CheckCircle2 
+  Ticket, Search, Printer, Calendar, Clock, Landmark, 
+  User, RefreshCw, CheckCircle2 
 } from 'lucide-react';
 import { formatDate } from '../utils/helpers';
 
-export default function AdminAdmitCards() {
+export function AdminAdmitCards() {
   const [admitCards, setAdmitCards] = useState([]);
   const [examinations, setExaminations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,32 +54,35 @@ export default function AdminAdmitCards() {
   };
 
   const filteredCards = admitCards.filter(card => {
-    const matchesSearch = 
-      (card.roll_number && card.roll_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (card.candidate?.full_name && card.candidate.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (card.candidate?.candidate_code && card.candidate.candidate_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (card.examination?.exam_title && card.examination.exam_title.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesExam = selectedExam ? card.examination?.examination_id === selectedExam : true;
+    const term = searchTerm.toLowerCase();
+    const roll = (card.roll_number || '').toLowerCase();
+    const name = (card.candidate?.full_name || '').toLowerCase();
+    const candNo = (card.candidate?.candidate_number || card.candidate?.candidate_code || '').toLowerCase();
+    const examName = (card.examination?.examination_name || card.examination?.exam_title || '').toLowerCase();
+    const examCode = (card.examination?.examination_code || card.examination?.exam_code || '').toLowerCase();
+
+    const matchesSearch = !searchTerm || roll.includes(term) || name.includes(term) || candNo.includes(term) || examName.includes(term) || examCode.includes(term);
+    const matchesExam = selectedExam ? (card.examination?.examination_id === selectedExam || card.examination_id === selectedExam) : true;
     return matchesSearch && matchesExam;
   });
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Admit Cards & Hall Tickets</h1>
-          <p className="text-sm text-slate-600">Issued examination credentials, candidate roll number rosters, and center allocations.</p>
-        </div>
-        <button
-          onClick={fetchData}
-          className="inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-300 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh List</span>
-        </button>
-      </div>
+    <div className="space-y-6 pb-6">
+      <PageHeader
+        title="Admit Cards & Hall Tickets Roster"
+        subtitle="Manage issued examination credentials, candidate roll number allocations, and center quotas"
+        crumbs={[{ label: 'Admin', to: '/admin/dashboard' }, { label: 'Admit Cards' }]}
+        actions={
+          <button
+            type="button"
+            onClick={fetchData}
+            className="gov-btn gov-btn-outline text-xs"
+          >
+            <RefreshCw size={14} />
+            <span>Refresh Roster</span>
+          </button>
+        }
+      />
 
       {alert && (
         <Alert 
@@ -89,130 +93,151 @@ export default function AdminAdmitCards() {
       )}
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+      <section aria-label="Admit card statistics" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="gov-card p-4 border-l-4 border-gov-700 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Total Admit Cards Issued</p>
-            <p className="text-2xl font-bold text-slate-800 mt-1">{admitCards.length}</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Hall Tickets Issued</p>
+            <p className="text-2xl font-bold text-gov-900 mt-0.5">{admitCards.length}</p>
           </div>
-          <div className="w-12 h-12 bg-blue-50 text-blue-800 rounded-lg flex items-center justify-center">
-            <Award className="w-6 h-6" />
-          </div>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gov-50 text-gov-700">
+            <Ticket size={24} />
+          </span>
         </div>
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+
+        <div className="gov-card p-4 border-l-4 border-india-green flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Active Examinations</p>
-            <p className="text-2xl font-bold text-emerald-700 mt-1">{examinations.length}</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Active Examinations</p>
+            <p className="text-2xl font-bold text-india-green mt-0.5">{examinations.length}</p>
           </div>
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-800 rounded-lg flex items-center justify-center">
-            <Calendar className="w-6 h-6" />
-          </div>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-india-green">
+            <Calendar size={24} />
+          </span>
         </div>
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+
+        <div className="gov-card p-4 border-l-4 border-saffron-500 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Integrity Verified</p>
-            <p className="text-2xl font-bold text-purple-700 mt-1">100%</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Relational Integrity Verified</p>
+            <p className="text-2xl font-bold text-saffron-600 mt-0.5">100%</p>
           </div>
-          <div className="w-12 h-12 bg-purple-50 text-purple-800 rounded-lg flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-50 text-saffron-600">
+            <CheckCircle2 size={24} />
+          </span>
         </div>
-      </div>
+      </section>
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search roll no, candidate, exam..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
-          />
-        </div>
+      <section className="gov-card p-4">
+        <div className="flex flex-col md:flex-row gap-3 justify-between items-center text-xs">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search roll no, candidate, exam..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="gov-input !pl-9"
+              aria-label="Search admit cards"
+            />
+          </div>
 
-        <div className="w-full md:w-auto">
-          <select
-            value={selectedExam}
-            onChange={(e) => setSelectedExam(e.target.value)}
-            className="text-sm border border-slate-300 rounded-md py-2 px-3 focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white w-full md:w-64"
-          >
-            <option value="">All Examinations</option>
-            {examinations.map(exam => (
-              <option key={exam.examination_id} value={exam.examination_id}>
-                {exam.exam_code} - {exam.exam_title.substring(0, 30)}...
-              </option>
-            ))}
-          </select>
+          <div className="w-full md:w-auto">
+            <select
+              value={selectedExam}
+              onChange={(e) => setSelectedExam(e.target.value)}
+              className="gov-input !w-auto"
+              aria-label="Filter by examination"
+            >
+              <option value="">All Examinations</option>
+              {examinations.map(exam => {
+                const code = exam.examination_code || exam.exam_code || '';
+                const name = exam.examination_name || exam.exam_title || '';
+                return (
+                  <option key={exam.examination_id || exam.id} value={exam.examination_id || exam.id}>
+                    {code} - {name.substring(0, 30)}...
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Roster Table */}
-      {loading ? (
-        <div className="bg-white p-12 rounded-lg border border-slate-200">
-          <LoadingSpinner size="lg" text="Loading admit card rosters..." />
+      <section className="gov-card">
+        <div className="gov-card-header justify-between">
+          <div className="flex items-center gap-2">
+            <Ticket size={18} />
+            <span>Admit Card Roll Number Register</span>
+          </div>
+          <span className="text-xs text-slate-500 font-normal">
+            Showing {filteredCards.length} of {admitCards.length} hall tickets
+          </span>
         </div>
-      ) : filteredCards.length === 0 ? (
-        <EmptyState
-          icon={Award}
-          title="No Admit Cards Found"
-          description="No admit cards have been issued yet, or none match the search criteria. Accept applications to generate admit cards."
-        />
-      ) : (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+
+        {loading ? (
+          <LoadingSpinner label="Loading admit card rosters..." />
+        ) : filteredCards.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              icon={Ticket}
+              title="No Admit Cards Found"
+              message="No admit cards have been issued yet, or none match the search criteria. Accept applications to generate admit cards."
+            />
+          </div>
+        ) : (
+          <div className="gov-table-wrap !border-0 !rounded-none">
+            <table className="gov-table">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-xs uppercase font-semibold">
-                  <th className="py-3 px-4">Roll Number</th>
-                  <th className="py-3 px-4">Candidate Details</th>
-                  <th className="py-3 px-4">Examination</th>
-                  <th className="py-3 px-4">Exam Center</th>
-                  <th className="py-3 px-4">Exam Date & Time</th>
-                  <th className="py-3 px-4">Issued On</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Candidate Particulars</th>
+                  <th>Examination Details</th>
+                  <th>Assigned Center</th>
+                  <th>Exam Schedule</th>
+                  <th>Issued Date</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {filteredCards.map((card) => (
-                  <tr key={card.admit_card_id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-mono font-bold text-blue-900 text-base">{card.roll_number}</div>
-                      <div className="text-xs text-slate-400 font-mono">App: {card.application?.application_number || 'N/A'}</div>
+                  <tr key={card.admit_card_id}>
+                    <td className="whitespace-nowrap">
+                      <div className="font-mono font-bold text-gov-900 text-sm">{card.roll_number}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">App: {card.application?.application_number || 'N/A'}</div>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-900">{card.candidate?.full_name || 'N/A'}</div>
-                      <div className="text-xs text-slate-500 font-mono">{card.candidate?.candidate_code}</div>
-                      <div className="text-xs text-slate-500">{card.candidate?.category} | {card.candidate?.gender}</div>
+                    <td>
+                      <div className="font-semibold text-slate-900">{card.candidate?.full_name || 'N/A'}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{card.candidate?.candidate_number || card.candidate?.candidate_code}</div>
+                      <div className="text-[11px] text-slate-500">{card.candidate?.category} | {card.candidate?.gender}</div>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{card.examination?.exam_title || 'N/A'}</div>
-                      <div className="text-xs text-slate-500 font-mono">{card.examination?.exam_code}</div>
+                    <td>
+                      <div className="font-semibold text-gov-800">{card.examination?.examination_name || card.examination?.exam_title || 'N/A'}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{card.examination?.examination_code || card.examination?.exam_code}</div>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-800">{card.center?.center_name || 'Default Center'}</div>
-                      <div className="text-xs text-slate-500">{card.center?.city}, {card.center?.state}</div>
+                    <td>
+                      <div className="font-medium text-slate-800">{card.center?.center_name || 'Designated Venue'}</div>
+                      <div className="text-[11px] text-slate-500">{card.center?.city}, {card.center?.state}</div>
                     </td>
-                    <td className="py-3 px-4 text-xs">
-                      <div className="font-semibold text-slate-800 flex items-center space-x-1">
-                        <Calendar className="w-3.5 h-3.5 text-blue-800" />
-                        <span>{formatDate(card.examination?.exam_date)}</span>
+                    <td className="whitespace-nowrap text-xs">
+                      <div className="font-semibold text-gov-900 flex items-center gap-1">
+                        <Calendar size={13} className="text-gov-700" />
+                        <span>{formatDate(card.examination?.examination_date || card.examination?.exam_date)}</span>
                       </div>
-                      <div className="text-slate-500 flex items-center space-x-1 mt-0.5">
-                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      <div className="text-saffron-600 font-medium flex items-center gap-1 mt-0.5">
+                        <Clock size={13} />
                         <span>Reporting: {card.reporting_time || '08:30 AM'}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-xs text-slate-500">
-                      {formatDate(card.issued_at)}
+                    <td className="whitespace-nowrap text-slate-600 text-xs">
+                      {formatDate(card.issue_date || card.issued_at || card.created_at)}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="text-right whitespace-nowrap">
                       <button
+                        type="button"
                         onClick={() => handleOpenPreview(card)}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 transition-colors"
+                        className="gov-btn gov-btn-outline !py-1 !px-2 text-xs"
                       >
-                        <Printer className="w-3.5 h-3.5" />
+                        <Printer size={13} />
                         <span>View / Print</span>
                       </button>
                     </td>
@@ -221,113 +246,117 @@ export default function AdminAdmitCards() {
               </tbody>
             </table>
           </div>
-          <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
-            <span>Showing {filteredCards.length} of {admitCards.length} generated admit cards</span>
-            <span>Relational Table: <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200">admit_cards</code></span>
-          </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* Hall Ticket Preview & Print Modal */}
       <Modal
-        isOpen={isViewModalOpen}
+        open={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         title="Official Examination Hall Ticket"
-        size="lg"
-      >
-        {selectedCard && (
-          <div className="space-y-6">
-            {/* Printable Document Area */}
-            <div id="admit-card-print-area" className="border-2 border-slate-800 p-6 bg-white rounded shadow-sm text-slate-800">
-              {/* Header */}
-              <div className="text-center border-b-2 border-slate-800 pb-4 mb-4">
-                <div className="w-12 h-12 mx-auto mb-1 flex items-center justify-center bg-blue-900 text-white font-serif font-black text-xl rounded-full">
-                  GOI
-                </div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-slate-900">
-                  Government Recruitment Examination Board
-                </h2>
-                <p className="text-xs text-slate-600 uppercase font-semibold">
-                  Official E-Admit Card & Examination Hall Pass
-                </p>
-                <p className="text-xs font-mono text-slate-500 mt-0.5">
-                  Reference No: {selectedCard.admit_card_id}
-                </p>
-              </div>
-
-              {/* Examination Info Banner */}
-              <div className="bg-slate-100 p-3 rounded border border-slate-300 text-center mb-4">
-                <h3 className="font-bold text-slate-900 text-sm">
-                  {selectedCard.examination?.exam_title}
-                </h3>
-                <p className="text-xs text-slate-700 font-mono mt-0.5">
-                  Notification Code: {selectedCard.examination?.exam_code} | Total Marks: {selectedCard.examination?.total_marks || 100}
-                </p>
-              </div>
-
-              {/* Candidate & Schedule Grid */}
-              <div className="grid grid-cols-2 gap-4 text-xs mb-4">
-                <div className="border border-slate-300 rounded p-3 space-y-2">
-                  <div className="font-bold text-slate-900 uppercase border-b pb-1">Candidate Particulars</div>
-                  <div><span className="text-slate-500">Roll Number:</span> <span className="font-mono font-bold text-blue-900 text-sm">{selectedCard.roll_number}</span></div>
-                  <div><span className="text-slate-500">Candidate Name:</span> <span className="font-semibold text-slate-900">{selectedCard.candidate?.full_name}</span></div>
-                  <div><span className="text-slate-500">Reg. Code:</span> <span className="font-mono">{selectedCard.candidate?.candidate_code}</span></div>
-                  <div><span className="text-slate-500">Category:</span> {selectedCard.candidate?.category} | Gender: {selectedCard.candidate?.gender}</div>
-                  <div><span className="text-slate-500">Application No:</span> <span className="font-mono">{selectedCard.application?.application_number}</span></div>
-                </div>
-
-                <div className="border border-slate-300 rounded p-3 space-y-2">
-                  <div className="font-bold text-slate-900 uppercase border-b pb-1">Schedule & Center</div>
-                  <div><span className="text-slate-500">Exam Date:</span> <span className="font-bold text-slate-900">{formatDate(selectedCard.examination?.exam_date)}</span></div>
-                  <div><span className="text-slate-500">Reporting Time:</span> <span className="font-bold text-rose-700">{selectedCard.reporting_time || '08:30 AM'}</span></div>
-                  <div><span className="text-slate-500">Venue:</span> <span className="font-semibold">{selectedCard.center?.center_name || 'Standard Center'}</span></div>
-                  <div><span className="text-slate-500">Address:</span> {selectedCard.center?.address || 'Designated Examination Hall'}</div>
-                  <div><span className="text-slate-500">City / State:</span> {selectedCard.center?.city}, {selectedCard.center?.state} - {selectedCard.center?.pincode}</div>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="border border-slate-300 rounded p-3 bg-slate-50 text-xs">
-                <div className="font-bold text-slate-900 uppercase mb-1">Important Instructions for Candidates</div>
-                <p className="text-slate-700 whitespace-pre-line leading-relaxed">
-                  {selectedCard.examination_instructions || '1. Please bring a clearly printed copy of this Admit Card along with original photo ID.\n2. Arrive at least 45 minutes before the reporting time for security scrutiny.\n3. Electronic devices, smartwatches, and notes are strictly prohibited.'}
-                </p>
-              </div>
-
-              {/* Signature Blocks */}
-              <div className="grid grid-cols-2 gap-4 mt-8 pt-4 border-t border-slate-200 text-center text-xs">
-                <div>
-                  <div className="h-10 border-b border-dashed border-slate-400 mx-10"></div>
-                  <p className="mt-1 font-semibold text-slate-700">Candidate Signature</p>
-                  <p className="text-[10px] text-slate-400">(To be signed in presence of invigilator)</p>
-                </div>
-                <div>
-                  <div className="h-10 border-b border-dashed border-slate-400 mx-10 flex items-center justify-center font-serif text-blue-900 font-bold italic">
-                    Controller of Examinations
-                  </div>
-                  <p className="mt-1 font-semibold text-slate-700">Authorized Signatory</p>
-                  <p className="text-[10px] text-slate-400">Government Recruitment Examination Board</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200">
+        maxWidth="max-w-3xl"
+        footer={
+          <div className="w-full flex items-center justify-between no-print">
+            <span className="text-xs text-slate-500">
+              Carry a physical printout along with a valid Government Photo ID to the exam center.
+            </span>
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setIsViewModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 text-sm font-medium"
+                className="gov-btn gov-btn-outline text-xs"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={handlePrint}
-                className="px-4 py-2 bg-blue-900 text-white rounded-md hover:bg-blue-800 text-sm font-medium inline-flex items-center space-x-2"
+                className="gov-btn gov-btn-accent text-xs"
               >
-                <Printer className="w-4 h-4" />
+                <Printer size={14} />
                 <span>Print Official Admit Card</span>
               </button>
+            </div>
+          </div>
+        }
+      >
+        {selectedCard && (
+          <div className="space-y-4">
+            {/* The Printable Section */}
+            <div id="printable-hall-ticket" className="border-2 border-gov-900 p-6 rounded bg-white text-slate-900 space-y-4">
+              {/* Header Band */}
+              <div className="text-center border-b-2 border-gov-900 pb-3 space-y-1">
+                <div className="flex items-center justify-center gap-2 text-gov-800">
+                  <Landmark size={24} />
+                  <span className="text-xs uppercase font-extrabold tracking-widest">
+                    GOVERNMENT RECRUITMENT EXAMINATION MANAGEMENT SYSTEM
+                  </span>
+                </div>
+                <h3 className="text-base font-extrabold uppercase text-gov-900 tracking-tight mt-1">
+                  E-ADMIT CARD / PROVISIONAL EXAMINATION HALL PASS
+                </h3>
+                <p className="text-xs font-semibold text-slate-600">
+                  Central Recruitment Commission • Academic Demonstration System
+                </p>
+                <p className="text-[11px] font-mono text-slate-500">
+                  Reference Record ID: {selectedCard.admit_card_id}
+                </p>
+              </div>
+
+              {/* Examination Banner */}
+              <div className="bg-slate-50 p-2.5 rounded border border-line text-center">
+                <h4 className="font-bold text-gov-900 text-sm">
+                  {selectedCard.examination?.examination_name || selectedCard.examination?.exam_title}
+                </h4>
+                <p className="text-xs text-slate-600 font-mono mt-0.5">
+                  Notification Code: {selectedCard.examination?.examination_code || selectedCard.examination?.exam_code} | Vacancies: {selectedCard.examination?.total_vacancies?.toLocaleString() || 'N/A'}
+                </p>
+              </div>
+
+              {/* Candidate & Schedule Grid */}
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="border border-line rounded p-3 space-y-1.5 bg-slate-50/50">
+                  <div className="font-bold text-gov-800 uppercase border-b border-line pb-1 text-[11px]">Candidate Particulars</div>
+                  <div><span className="text-slate-500">ROLL NUMBER:</span> <span className="font-mono font-bold text-gov-900 text-sm ml-1">{selectedCard.roll_number}</span></div>
+                  <div><span className="text-slate-500">Full Legal Name:</span> <strong className="text-slate-900 ml-1">{selectedCard.candidate?.full_name}</strong></div>
+                  <div><span className="text-slate-500">Candidate Reg. No:</span> <span className="font-mono ml-1">{selectedCard.candidate?.candidate_number || selectedCard.candidate?.candidate_code}</span></div>
+                  <div><span className="text-slate-500">Category & Gender:</span> <span className="ml-1">{selectedCard.candidate?.category} | {selectedCard.candidate?.gender}</span></div>
+                  <div><span className="text-slate-500">Application Number:</span> <span className="font-mono ml-1">{selectedCard.application?.application_number}</span></div>
+                </div>
+
+                <div className="border border-line rounded p-3 space-y-1.5 bg-slate-50/50">
+                  <div className="font-bold text-gov-800 uppercase border-b border-line pb-1 text-[11px]">Schedule & Center Venue</div>
+                  <div><span className="text-slate-500">Exam Date:</span> <strong className="text-gov-900 ml-1">{formatDate(selectedCard.examination?.examination_date || selectedCard.examination?.exam_date)}</strong></div>
+                  <div><span className="text-slate-500">Reporting Time:</span> <strong className="text-saffron-600 ml-1">{selectedCard.reporting_time || '08:30 AM'} (Sharp)</strong></div>
+                  <div><span className="text-slate-500">Test Venue:</span> <strong className="text-slate-900 ml-1">{selectedCard.center?.center_name || 'Designated Examination Center'}</strong></div>
+                  <div><span className="text-slate-500">Address:</span> <span className="ml-1">{selectedCard.center?.address || 'Main Campus'}</span></div>
+                  <div><span className="text-slate-500">Location:</span> <span className="ml-1">{selectedCard.center?.city}, {selectedCard.center?.state} - {selectedCard.center?.pincode}</span></div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="border border-line rounded p-3 bg-slate-50 text-xs">
+                <div className="font-bold text-gov-800 uppercase mb-1 text-[11px]">Important Instructions for Candidates</div>
+                <p className="text-slate-700 whitespace-pre-line leading-relaxed">
+                  {selectedCard.examination_instructions || '1. Please bring a clearly printed copy of this Admit Card along with an original government photo ID.\n2. Arrive at least 45 minutes before the reporting time for security scrutiny and identity verification.\n3. Electronic devices, smartwatches, and notes are strictly prohibited.'}
+                </p>
+              </div>
+
+              {/* Signature Blocks */}
+              <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-line text-center text-xs">
+                <div>
+                  <div className="h-8 border-b border-dashed border-slate-400 mx-10"></div>
+                  <p className="mt-1 font-semibold text-slate-700 text-[11px]">Candidate Signature</p>
+                  <p className="text-[10px] text-slate-400">(To be signed in presence of invigilator)</p>
+                </div>
+                <div>
+                  <div className="h-8 border-b border-dashed border-slate-400 mx-10 flex items-center justify-center font-bold text-gov-800 italic text-[11px]">
+                    Controller of Examinations
+                  </div>
+                  <p className="mt-1 font-semibold text-slate-700 text-[11px]">Authorized Signatory</p>
+                  <p className="text-[10px] text-slate-400">Recruitment Examination Board</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -336,3 +365,4 @@ export default function AdminAdmitCards() {
   );
 }
 
+export default AdminAdmitCards;
