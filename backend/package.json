@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "test": "node tests/integration.test.js && node tests/cloud-mode-isolation.test.js",
     "seed:users": "node scripts/seedSupabaseUsers.js"
   },
   "dependencies": {

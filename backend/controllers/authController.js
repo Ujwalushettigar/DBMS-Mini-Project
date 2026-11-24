@@ -47,16 +47,26 @@ const register = async (req, res, next) => {
       }
     );
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        candidate_id: candidate.candidate_id
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    let token = null;
+    if (isSupabaseConfigured()) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (signInError) throw signInError;
+      token = signInData?.session?.access_token;
+    } else {
+      token = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          candidate_id: candidate.candidate_id
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+    }
 
     return successResponse(
       res,

@@ -579,48 +579,77 @@ const supabaseService = {
 
   createCandidateWithProfile: async (profileData, candidateData) => {
     if (isSupabaseConfigured()) {
-      // Create user via Supabase Admin Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: profileData.email,
-        password: profileData.password,
-        email_confirm: true
-      });
+      // 1. Create user via Supabase Auth Admin API
+      const { data: authData, error: authError } =
+        await supabase.auth.admin.createUser({
+          email: profileData.email.trim().toLowerCase(),
+          password: profileData.password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: candidateData.full_name
+          }
+        });
+
       if (authError) throw authError;
 
       const userId = authData.user.id;
 
-      // Upsert into profiles (trigger also handles this, but explicit upsert ensures role)
-      await supabase.from('profiles').upsert({
-        id: userId,
-        email: profileData.email,
-        role: 'candidate'
-      });
+      try {
+        // 2. Explicitly upsert profile to guarantee role = 'candidate'
+        const { data: profile, error: profileError } =
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              email: authData.user.email,
+              role: 'candidate'
+            }, {
+              onConflict: 'id'
+            })
+            .select()
+            .single();
 
-      // Insert into candidates
-      const candidate_number = generateCandidateNumber();
-      const { data: candidate, error: candError } = await supabase
-        .from('candidates')
-        .insert([{
-          user_id: userId,
-          candidate_number,
-          ...candidateData
-        }])
-        .select()
-        .single();
+        if (profileError) throw profileError;
 
-      if (candError) throw candError;
+        // 3. Insert into candidates using actual Auth UUID
+        const { data: candidate, error: candidateError } =
+          await supabase
+            .from('candidates')
+            .insert([{
+              user_id: userId,
+              candidate_number: generateCandidateNumber(),
+              ...candidateData
+            }])
+            .select()
+            .single();
 
-      return {
-        user: { id: userId, email: profileData.email, role: 'candidate' },
-        candidate
-      };
+        if (candidateError) throw candidateError;
+
+        return {
+          user: {
+            id: userId,
+            email: authData.user.email,
+            role: 'candidate'
+          },
+          candidate
+        };
+
+      } catch (error) {
+        // Rollback: delete Auth user so foreign-key cascade also cleans up profile
+        try {
+          await supabase.auth.admin.deleteUser(userId);
+        } catch (delError) {
+          console.error('[GREMS] Error rolling back auth user:', delError.message);
+        }
+        throw error;
+      }
     }
 
     // Local in-memory simulation
     const userId = `c1000000-0000-0000-0000-${String(db.profiles.length + 1).padStart(12, '0')}`;
     const newProfile = {
       id: userId,
-      email: profileData.email,
+      email: profileData.email.trim().toLowerCase(),
       role: 'candidate',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -971,16 +1000,68 @@ const supabaseService = {
   },
 
   assignCenterToExam: async ({ examination_id, center_id, allocated_capacity }) => {
-    const center = db.exam_centers.find(c => c.center_id === center_id);
-    if (!center) {
-      const err = new Error('Exam center not found.');
-      err.status = 404;
-      throw err;
-    }
     const allocCap = Number(allocated_capacity);
     if (isNaN(allocCap) || allocCap <= 0) {
       const err = new Error('Allocated capacity must be a positive integer.');
       err.status = 400;
+      throw err;
+    }
+
+    if (isSupabaseConfigured()) {
+      // 1. Fetch center from Supabase
+      const { data: center, error: centerErr } = await supabase
+        .from('exam_centers')
+        .select('*')
+        .eq('center_id', center_id)
+        .maybeSingle();
+
+      if (centerErr) throw centerErr;
+      if (!center) {
+        const err = new Error('Exam center not found.');
+        err.status = 404;
+        throw err;
+      }
+
+      if (allocCap > center.total_capacity) {
+        const err = new Error(`Allocated capacity (${allocCap}) exceeds center total physical capacity (${center.total_capacity}).`);
+        err.status = 400;
+        throw err;
+      }
+
+      // 2. Fetch examination to verify existence
+      const { data: exam, error: examErr } = await supabase
+        .from('examinations')
+        .select('*')
+        .eq('examination_id', examination_id)
+        .maybeSingle();
+
+      if (examErr) throw examErr;
+      if (!exam) {
+        const err = new Error('Examination not found.');
+        err.status = 404;
+        throw err;
+      }
+
+      // 3. Upsert into examination_centers (trigger trg_validate_center_allocation also enforces physical capacity on exam date)
+      const { data, error } = await supabase
+        .from('examination_centers')
+        .upsert({
+          examination_id,
+          center_id,
+          allocated_capacity: allocCap
+        }, { onConflict: 'examination_id,center_id' })
+        .select('*, exam_centers(*)')
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    // Local in-memory mode
+    const center = db.exam_centers.find(c => c.center_id === center_id);
+    if (!center) {
+      const err = new Error('Exam center not found.');
+      err.status = 404;
       throw err;
     }
     if (allocCap > center.total_capacity) {
@@ -1002,20 +1083,6 @@ const supabaseService = {
         err.status = 400;
         throw err;
       }
-    }
-
-    if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
-        .from('examination_centers')
-        .upsert({
-          examination_id,
-          center_id,
-          allocated_capacity: allocCap
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
     }
 
     const existingIdx = db.examination_centers.findIndex(
@@ -1089,6 +1156,115 @@ const supabaseService = {
   },
 
   createApplication: async ({ candidate_id, examination_id, center_id }) => {
+    if (isSupabaseConfigured()) {
+      // 1. Fetch examination from actual PostgreSQL
+      const { data: exam, error: examError } = await supabase
+        .from('examinations')
+        .select('*')
+        .eq('examination_id', examination_id)
+        .maybeSingle();
+
+      if (examError) throw examError;
+
+      if (!exam) {
+        const err = new Error('Examination not found.');
+        err.status = 404;
+        throw err;
+      }
+
+      if (exam.examination_status !== 'published') {
+        const err = new Error('Examination is not published.');
+        err.status = 400;
+        throw err;
+      }
+
+      // 2. Validate application dates
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (
+        today < exam.application_start_date ||
+        today > exam.application_end_date
+      ) {
+        const err = new Error('Application window is closed.');
+        err.status = 400;
+        throw err;
+      }
+
+      // 3. Check duplicate application in PostgreSQL
+      const { data: existing, error: duplicateError } = await supabase
+        .from('applications')
+        .select('application_id')
+        .eq('candidate_id', candidate_id)
+        .eq('examination_id', examination_id)
+        .maybeSingle();
+
+      if (duplicateError) throw duplicateError;
+
+      if (existing) {
+        const err = new Error('You have already applied.');
+        err.status = 409;
+        throw err;
+      }
+
+      // 4. Validate allocated center
+      if (center_id) {
+        const { data: allocation, error: allocationError } =
+          await supabase
+            .from('examination_centers')
+            .select('allocated_capacity')
+            .eq('examination_id', examination_id)
+            .eq('center_id', center_id)
+            .maybeSingle();
+
+        if (allocationError) throw allocationError;
+
+        if (!allocation) {
+          const err = new Error(
+            'Selected center is not allocated for this examination.'
+          );
+          err.status = 400;
+          throw err;
+        }
+
+        const { count, error: countError } = await supabase
+          .from('applications')
+          .select('application_id', {
+            count: 'exact',
+            head: true
+          })
+          .eq('examination_id', examination_id)
+          .eq('center_id', center_id)
+          .not('application_status', 'in', '("rejected","withdrawn")');
+
+        if (countError) throw countError;
+
+        if (count >= allocation.allocated_capacity) {
+          const err = new Error('Examination center capacity reached.');
+          err.status = 400;
+          throw err;
+        }
+      }
+
+      // 5. Insert directly into Supabase
+      const { data, error } = await supabase
+        .from('applications')
+        .insert([{
+          application_number: generateApplicationNumber(),
+          candidate_id,
+          examination_id,
+          center_id: center_id || null,
+          application_status: 'submitted',
+          payment_status: 'paid'
+        }])
+        .select('*, examinations(*), exam_centers(*)')
+        .single();
+
+      if (error) throw error;
+
+      return data;
+    }
+
+    // LOCAL MODE ONLY:
     // 1. Verify examination status & dates
     const exam = db.examinations.find(e => e.examination_id === examination_id);
     if (!exam) {
@@ -1141,23 +1317,6 @@ const supabaseService = {
     const application_number = generateApplicationNumber();
     const application_id = `b1000000-0000-0000-0000-${String(db.applications.length + 1).padStart(12, '0')}`;
 
-    if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
-        .from('applications')
-        .insert([{
-          application_number,
-          candidate_id,
-          examination_id,
-          center_id: center_id || null,
-          application_status: 'submitted',
-          payment_status: 'paid'
-        }])
-        .select('*, examinations(*), exam_centers(*)')
-        .single();
-      if (error) throw error;
-      return data;
-    }
-
     const newApp = {
       application_id,
       application_number,
@@ -1183,6 +1342,68 @@ const supabaseService = {
       }
     }
 
+    if (isSupabaseConfigured()) {
+      if (center_id) {
+        const { data: currentApp, error: appErr } = await supabase
+          .from('applications')
+          .select('examination_id')
+          .eq('application_id', id)
+          .maybeSingle();
+
+        if (appErr) throw appErr;
+        if (!currentApp) {
+          const err = new Error('Application not found.');
+          err.status = 404;
+          throw err;
+        }
+
+        const { data: alloc, error: allocErr } = await supabase
+          .from('examination_centers')
+          .select('allocated_capacity')
+          .eq('examination_id', currentApp.examination_id)
+          .eq('center_id', center_id)
+          .maybeSingle();
+
+        if (allocErr) throw allocErr;
+        if (!alloc) {
+          const err = new Error('Selected center is not designated or allocated for this examination.');
+          err.status = 400;
+          throw err;
+        }
+
+        const { count, error: countErr } = await supabase
+          .from('applications')
+          .select('application_id', { count: 'exact', head: true })
+          .eq('examination_id', currentApp.examination_id)
+          .eq('center_id', center_id)
+          .neq('application_id', id)
+          .not('application_status', 'in', '("rejected","withdrawn")');
+
+        if (countErr) throw countErr;
+        if (count >= alloc.allocated_capacity) {
+          const err = new Error(`Allocated capacity of ${alloc.allocated_capacity} reached for this exam center. Cannot assign more candidates.`);
+          err.status = 400;
+          throw err;
+        }
+      }
+
+      const updatePayload = { updated_at: new Date().toISOString() };
+      if (application_status) updatePayload.application_status = application_status;
+      if (center_id) updatePayload.center_id = center_id;
+      if (remarks !== undefined) updatePayload.remarks = remarks;
+
+      const { data, error } = await supabase
+        .from('applications')
+        .update(updatePayload)
+        .eq('application_id', id)
+        .select('*, candidates(*), examinations(*), exam_centers(*)')
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    // Local in-memory mode
     if (center_id) {
       const currentApp = db.applications.find(a => a.application_id === id);
       const examId = currentApp ? currentApp.examination_id : null;
@@ -1202,22 +1423,6 @@ const supabaseService = {
           throw err;
         }
       }
-    }
-
-    if (isSupabaseConfigured()) {
-      const updatePayload = { updated_at: new Date().toISOString() };
-      if (application_status) updatePayload.application_status = application_status;
-      if (center_id) updatePayload.center_id = center_id;
-      if (remarks !== undefined) updatePayload.remarks = remarks;
-
-      const { data, error } = await supabase
-        .from('applications')
-        .update(updatePayload)
-        .eq('application_id', id)
-        .select('*, candidates(*), examinations(*), exam_centers(*)')
-        .single();
-      if (error) throw error;
-      return data;
     }
 
     const idx = db.applications.findIndex(a => a.application_id === id);
@@ -1247,6 +1452,16 @@ const supabaseService = {
   },
 
   getAdmitCardsByCandidateId: async (candidateId) => {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('admit_cards')
+        .select('*, applications!inner(*, candidates(*), examinations(*), exam_centers(*))')
+        .eq('applications.candidate_id', candidateId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+
     const candidateAppIds = db.applications
       .filter(a => a.candidate_id === candidateId)
       .map(a => a.application_id);
@@ -1271,6 +1486,69 @@ const supabaseService = {
   },
 
   generateAdmitCard: async ({ application_id, reporting_time = '08:30:00', examination_instructions }) => {
+    if (isSupabaseConfigured()) {
+      // 1. Fetch application from Supabase
+      const { data: app, error: appError } = await supabase
+        .from('applications')
+        .select('*, examinations(*)')
+        .eq('application_id', application_id)
+        .maybeSingle();
+
+      if (appError) throw appError;
+      if (!app) {
+        const err = new Error('Application record not found.');
+        err.status = 404;
+        throw err;
+      }
+
+      if (app.application_status !== 'accepted' && app.application_status !== 'approved') {
+        const err = new Error(`Cannot issue Admit Card: Application status is "${app.application_status}". Only "accepted" applications are eligible.`);
+        err.status = 400;
+        throw err;
+      }
+
+      if (!app.center_id) {
+        const err = new Error('Cannot issue Admit Card: An examination center must be assigned to the application first.');
+        err.status = 400;
+        throw err;
+      }
+
+      // Check if card already exists (1-to-1 relationship)
+      const { data: existing, error: existError } = await supabase
+        .from('admit_cards')
+        .select('roll_number')
+        .eq('application_id', application_id)
+        .maybeSingle();
+
+      if (existError) throw existError;
+      if (existing) {
+        const err = new Error(`Admit Card already generated with Roll Number: ${existing.roll_number}`);
+        err.status = 409;
+        throw err;
+      }
+
+      const examCode = app.examinations?.examination_code || 'EXAM';
+      const roll_number = generateRollNumber(examCode);
+      const admit_card_number = generateAdmitCardNumber();
+
+      const { data, error } = await supabase
+        .from('admit_cards')
+        .insert([{
+          application_id,
+          admit_card_number,
+          roll_number,
+          issue_date: new Date().toISOString().split('T')[0],
+          reporting_time,
+          examination_instructions: examination_instructions || '1. Carry original Photo ID.\n2. Carry printed copy of this Hall Ticket.'
+        }])
+        .select('*, applications(*, candidates(*), examinations(*), exam_centers(*))')
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    // Local in-memory mode
     const app = db.applications.find(a => a.application_id === application_id);
     if (!app) {
       const err = new Error('Application record not found.');
@@ -1278,7 +1556,7 @@ const supabaseService = {
       throw err;
     }
 
-    if (app.application_status !== 'accepted') {
+    if (app.application_status !== 'accepted' && app.application_status !== 'approved') {
       const err = new Error(`Cannot issue Admit Card: Application status is "${app.application_status}". Only "accepted" applications are eligible.`);
       err.status = 400;
       throw err;
@@ -1302,23 +1580,6 @@ const supabaseService = {
     const roll_number = generateRollNumber(exam?.examination_code || 'EXAM');
     const admit_card_number = generateAdmitCardNumber();
     const admit_card_id = `ac000000-0000-0000-0000-${String(db.admit_cards.length + 1).padStart(12, '0')}`;
-
-    if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
-        .from('admit_cards')
-        .insert([{
-          application_id,
-          admit_card_number,
-          roll_number,
-          issue_date: new Date().toISOString().split('T')[0],
-          reporting_time,
-          examination_instructions: examination_instructions || '1. Carry original Photo ID.\n2. Carry printed copy of this Hall Ticket.'
-        }])
-        .select('*, applications(*, candidates(*), examinations(*), exam_centers(*))')
-        .single();
-      if (error) throw error;
-      return data;
-    }
 
     const newCard = {
       admit_card_id,
@@ -1531,6 +1792,46 @@ const supabaseService = {
   },
 
   getCandidateMetrics: async (candidateId) => {
+    if (isSupabaseConfigured()) {
+      const { data: apps, error: appsError } = await supabase
+        .from('applications')
+        .select('application_id, application_status, applied_at, examination_id, examinations(*), exam_centers(*)')
+        .eq('candidate_id', candidateId)
+        .order('applied_at', { ascending: false });
+
+      if (appsError) throw appsError;
+
+      const appIds = (apps || []).map(a => a.application_id);
+
+      const [
+        { count: availableExams },
+        { count: admitCardsCount },
+        { count: publishedResultsCount }
+      ] = await Promise.all([
+        supabase.from('examinations').select('*', { count: 'exact', head: true }).eq('examination_status', 'published'),
+        appIds.length > 0
+          ? supabase.from('admit_cards').select('*', { count: 'exact', head: true }).in('application_id', appIds)
+          : Promise.resolve({ count: 0 }),
+        appIds.length > 0
+          ? supabase.from('results').select('*', { count: 'exact', head: true }).in('application_id', appIds).or('is_published.eq.true,published_at.not.is.null')
+          : Promise.resolve({ count: 0 })
+      ]);
+
+      const total = apps ? apps.length : 0;
+      const pending = (apps || []).filter(a => ['submitted', 'under_review'].includes(a.application_status)).length;
+      const accepted = (apps || []).filter(a => a.application_status === 'accepted' || a.application_status === 'approved').length;
+
+      return {
+        total_applications: total,
+        pending_applications: pending,
+        accepted_applications: accepted,
+        available_examinations: availableExams || 0,
+        admit_cards_count: admitCardsCount || 0,
+        published_results_count: publishedResultsCount || 0,
+        recent_applications: (apps || []).slice(0, 4)
+      };
+    }
+
     const candidateApps = db.applications.filter(a => a.candidate_id === candidateId);
     const candidateAppIds = candidateApps.map(a => a.application_id);
 
